@@ -122,3 +122,19 @@ a {
   color: var(--text-muted);
   font-size: 0.9rem;
 }
+
+@media print {
+  body {
+    background: white;
+  }
+  .no-print, .main-header, .main-footer {
+    display: none !important;
+  }
+  .only-print {
+    display: block !important;
+  }
+  .receipt-box {
+    border: none !important;
+    box-shadow: none !important;
+  }
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "id": 3,
+    "name": "Classic Trench Coat",
+    "category": "Clothes",
+    "price": 5500,
+    "image": "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=400&q=80",
+    "stock": 10,
+    "salesCount": 0
+  },
+  {
+    "id": 5,
+    "name": "Evening Clutch",
+    "category": "Bags",
+    "price": 2100,
+    "image": "https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?auto=format&fit=crop&w=400&q=80",
+    "stock": 10,
+    "salesCount": 0
+  },
+  {
+    "id": 7,
+    "name": "Classic Stilettos",
+    "category": "Shoes",
+    "price": 3800,
+    "image": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=400&q=80",
+    "stock": 10,
+    "salesCount": 0
+  },
+  {
+    "id": 1775319359960,
+    "name": "birkhe kapada",
+    "category": "Clothes",
+    "price": 1650,
+    "image": "/uploads/1775319359958_birkhe_kapada.jpg",
+    "stock": 10,
+    "salesCount": 0
+  },
+  {
+    "id": 1775320065927,
+    "name": "tote bag new",
+    "category": "Bags",
+    "price": 1260,
+    "image": "/uploads/1775320065922_tote_bag_new.jpg",
+    "stock": 10,
+    "salesCount": 0
+  },
+  {
+    "id": 1775320087607,
+    "name": "toate bag",
+    "category": "Bags",
+    "price": 1500,
+    "image": "/uploads/1775320087606_toate_bag.jpg",
+    "stock": 9,
+    "salesCount": 1
+  }
+]

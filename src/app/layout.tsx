@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import ProfileNav from "./ProfileNav";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -36,6 +37,9 @@ export default function RootLayout({
               <a href="#shoes">Shoes</a>
               <a href="#cart" className="cart-link">Cart (0)</a>
             </nav>
+            <div style={{ marginLeft: "auto", display: "flex", gap: "1rem" }}>
+              <ProfileNav />
+            </div>
           </div>
         </header>
         <main>{children}</main>
