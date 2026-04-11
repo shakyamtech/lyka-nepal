@@ -35,6 +35,43 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "ClothingStore",
+              "name": "LYKA Nepal",
+              "image": "https://lyka-nepal.example.com/logo.png",
+              "@id": "https://lyka-nepal.example.com",
+              "url": "https://lyka-nepal.example.com",
+              "telephone": "+9771234567890",
+              "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "Imadole",
+                "addressLocality": "Lalitpur",
+                "postalCode": "44700",
+                "addressCountry": "NP"
+              },
+              "openingHoursSpecification": {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday"
+                ],
+                "opens": "10:00",
+                "closes": "20:00"
+              }
+            })
+          }}
+        />
+      </head>
       <body className={inter.className}>
         <Navigation />
         <main>{children}</main>

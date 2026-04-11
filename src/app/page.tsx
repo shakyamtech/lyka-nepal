@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import "./page.css";
 
 export default function Home() {
@@ -29,6 +30,19 @@ export default function Home() {
         setLoading(false);
       });
 
+    // Load cart from localStorage
+    const savedCart = localStorage.getItem('lyka_cart');
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart);
+        setCart(parsed);
+        // Initial sync for header
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: parsed.length } }));
+      } catch (e) {
+        console.error("Failed to parse saved cart");
+      }
+    }
+
     // Handle hash changes to automatically set the filter when clicking header links
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
@@ -49,6 +63,13 @@ export default function Home() {
 
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  // Sync cart to localStorage whenever it changes
+  useEffect(() => {
+    if (loading) return; // Don't overwrite with empty before load
+    localStorage.setItem('lyka_cart', JSON.stringify(cart));
+    window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: cart.length } }));
+  }, [cart, loading]);
 
   const addToCart = (product: any) => {
     setCart([...cart, product]);
@@ -169,7 +190,16 @@ export default function Home() {
           {filteredProducts.length === 0 && <p style={{ gridColumn: "1 / -1", textAlign: "center", fontStyle: "italic", color: "var(--text-muted)" }}>No products found matching your search.</p>}
           {filteredProducts.map((product) => (
             <div key={product.id} className="product-card">
-              <div className="product-image" style={{ backgroundImage: `url(${product.image})` }}></div>
+              <div className="product-image" style={{ position: 'relative', overflow: 'hidden' }}>
+                <Image 
+                  src={product.image} 
+                  alt={product.name} 
+                  fill 
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  style={{ objectFit: 'cover' }}
+                  priority={false}
+                />
+              </div>
               <div className="product-info">
                 <div>
                   <span className="category">{product.category}</span>
@@ -219,18 +249,20 @@ export default function Home() {
               ) : (
                 <form className="checkout-form complete-payment" onSubmit={handleFinalSubmit} style={{ marginTop: '2rem', padding: '1rem', border: '1px dashed var(--primary)', borderRadius: '8px', background: '#fafafa' }}>
                   <h3 style={{ marginBottom: "1rem", color: "var(--foreground)" }}>Step 2: Pay & Verify</h3>
-                  <div style={{ padding: "0", background: "white", margin: "0 auto 1.5rem", width: "fit-content", borderRadius: "12px", border: "1px solid var(--border)", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", overflow: "hidden" }}>
+                  <div style={{ padding: "0", background: "white", margin: "0 auto 1.5rem", width: "fit-content", borderRadius: "12px", border: "1px solid var(--border)", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", overflow: "hidden", position: 'relative', minHeight: '250px', minWidth: '250px' }}>
                     {/* Dynamic QR Graphic */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "200px", minWidth: "200px" }}>
-                        <img 
+                    <div style={{ position: 'relative', width: '250px', height: '250px' }}>
+                        <Image 
                           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/site-assets/qr.png?v=${Date.now()}`} 
                           alt="Store QR Code" 
-                          unselectable="on"
-                          style={{ width: "250px", height: "100%", objectFit: "cover" }}
+                          fill
+                          style={{ objectFit: 'cover' }}
+                          unoptimized={true} // For dynamic storage images
                           onError={(e) => {
                              // Fallback to text if QR isn't uploaded yet
-                             e.currentTarget.style.display = 'none';
-                             e.currentTarget.parentElement!.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; font-size: 0.9rem;"><strong>NPR ' + totalBill + '</strong><br/><br/>(Please ask Admin to<br/>upload QR code in Dashboard)</div>';
+                             const target = e.target as HTMLElement;
+                             target.style.display = 'none';
+                             target.parentElement!.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; font-size: 0.9rem;"><strong>NPR ' + totalBill + '</strong><br/><br/>(Please ask Admin to<br/>upload QR code in Dashboard)</div>';
                           }}
                        />
                     </div>

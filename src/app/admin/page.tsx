@@ -363,45 +363,47 @@ export default function AdminPage() {
         {orders.length === 0 ? (
           <p>No orders yet.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            {orders.map(order => (
-              <div key={order.id} style={{ background: "white", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", gap: "2rem", flexWrap: "wrap" }}>
-                <div style={{ flex: "1 1 300px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                    <h3 style={{ margin: 0 }}>{order.id}</h3>
-                    <span style={{ 
-                      padding: "0.25rem 0.75rem", 
-                      borderRadius: "50px", 
-                      fontSize: "0.8rem", 
-                      fontWeight: "bold",
-                      background: order.status === 'Verified' ? '#dcfce7' : order.status === 'Rejected' ? '#fee2e2' : '#fef9c3',
-                      color: order.status === 'Verified' ? '#166534' : order.status === 'Rejected' ? '#991b1b' : '#854d0e'
-                     }}>
-                      {order.status || 'Pending'}
-                    </span>
+          <div className="order-queue">
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {orders.map(order => (
+                <div key={order.id} style={{ background: "white", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 300px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                      <h3 style={{ margin: 0 }}>{order.id}</h3>
+                      <span style={{ 
+                        padding: "0.25rem 0.75rem", 
+                        borderRadius: "50px", 
+                        fontSize: "0.8rem", 
+                        fontWeight: "bold",
+                        background: order.status === 'Verified' ? '#dcfce7' : order.status === 'Rejected' ? '#fee2e2' : '#fef9c3',
+                        color: order.status === 'Verified' ? '#166534' : order.status === 'Rejected' ? '#991b1b' : '#854d0e'
+                       }}>
+                        {order.status || 'Pending'}
+                      </span>
+                    </div>
+                    <p><strong>Customer:</strong> {order.name} ({order.email})</p>
+                    <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
+                    <p><strong>Total:</strong> NPR {order.total}</p>
+                    
+                    {(!order.status || order.status === 'Pending Verification') && (
+                      <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
+                        <button onClick={() => handleVerifyOrder(order.id, 'VERIFY')} style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>☑ Verify Payment</button>
+                        <button onClick={() => handleVerifyOrder(order.id, 'REJECT')} style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>✕ Reject</button>
+                      </div>
+                    )}
                   </div>
-                  <p><strong>Customer:</strong> {order.name} ({order.email})</p>
-                  <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
-                  <p><strong>Total:</strong> NPR {order.total}</p>
                   
-                  {(!order.status || order.status === 'Pending Verification') && (
-                    <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
-                      <button onClick={() => handleVerifyOrder(order.id, 'VERIFY')} style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>☑ Verify Payment</button>
-                      <button onClick={() => handleVerifyOrder(order.id, 'REJECT')} style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>✕ Reject</button>
+                  {order.screenshotUrl && (
+                    <div style={{ flex: "0 0 300px", borderLeft: "1px solid var(--border)", paddingLeft: "2rem" }}>
+                      <strong>Screenshot:</strong>
+                      <a href={order.screenshotUrl} target="_blank" rel="noreferrer" style={{ display: "block", marginTop: "0.5rem" }}>
+                        <img src={order.screenshotUrl} alt="Payment" style={{ width: "100%", maxHeight: "200px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "4px" }} />
+                      </a>
                     </div>
                   )}
                 </div>
-                
-                {order.screenshotUrl && (
-                  <div style={{ flex: "0 0 300px", borderLeft: "1px solid var(--border)", paddingLeft: "2rem" }}>
-                    <strong>Screenshot:</strong>
-                    <a href={order.screenshotUrl} target="_blank" rel="noreferrer" style={{ display: "block", marginTop: "0.5rem" }}>
-                      <img src={order.screenshotUrl} alt="Payment" style={{ width: "100%", maxHeight: "200px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "4px" }} />
-                    </a>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </section>
@@ -457,8 +459,6 @@ export default function AdminPage() {
               </label>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>This will instantly replace the `/qr.png` file on the site.</p>
             </div>
-          </section>
-
           </section>
 
           {/* Hero Settings */}
