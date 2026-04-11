@@ -1,16 +1,25 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-const dataFilePath = path.join(process.cwd(), 'src', 'data', 'inventory.json');
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const fileData = fs.readFileSync(dataFilePath, 'utf8');
-    const products = JSON.parse(fileData);
+    const { data, error } = await supabaseAdmin
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    // Map DB fields to what frontend expects if naming differs
+    const products = data.map(p => ({
+      ...p,
+      salesCount: p.sales_count // Adjusting to camelCase for frontend
+    }));
+
     return NextResponse.json(products);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to read data' }, { status: 500 });
+    console.error("Fetch products err:", error);
+    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
   }
 }
 
@@ -25,47 +34,49 @@ export async function POST(request: Request) {
     
     let imageUrl = "";
 
-    // If an actual file was uploaded
+    // Upload to Supabase Storage
     if (file && typeof file !== 'string') {
       const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      // Generate secure unique path
       const ext = file.name.split('.').pop() || 'jpg';
-      const safeName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-      const fileName = `${Date.now()}_${safeName}.${ext}`;
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
       
-      // Auto-create folder if it doesn't exist
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
+      const { data: uploadData, error: uploadError } = await supabaseAdmin
+        .storage
+        .from('inventory')
+        .upload(fileName, bytes, {
+          contentType: file.type,
+          upsert: false
+        });
 
-      const filePath = path.join(uploadDir, fileName);
-      fs.writeFileSync(filePath, buffer);
-      
-      // The relative URL for the storefront
-      imageUrl = `/uploads/${fileName}`;
+      if (uploadError) throw uploadError;
+
+      // Get Public URL
+      const { data: publicUrlData } = supabaseAdmin
+        .storage
+        .from('inventory')
+        .getPublicUrl(fileName);
+        
+      imageUrl = publicUrlData.publicUrl;
     }
 
-    const fileData = fs.readFileSync(dataFilePath, 'utf8');
-    const products = JSON.parse(fileData);
-    
-    const newProduct = {
-      id: Date.now(),
-      name,
-      category,
-      price: Number(price),
-      image: imageUrl || "https://dummyimage.com/400x500/ccc/fff.png",
-      stock: Number(stock) || 10,
-      salesCount: 0
-    };
+    const { data, error } = await supabaseAdmin
+      .from('products')
+      .insert([{
+        name,
+        category,
+        price: Number(price),
+        image: imageUrl || "https://dummyimage.com/400x500/ccc/fff.png",
+        stock: Number(stock) || 10,
+        sales_count: 0
+      }])
+      .select()
+      .single();
 
-    products.push(newProduct);
-    fs.writeFileSync(dataFilePath, JSON.stringify(products, null, 2));
+    if (error) throw error;
 
-    return NextResponse.json(newProduct, { status: 201 });
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
+    console.error("Save product err:", error);
     return NextResponse.json({ error: 'Failed to save product' }, { status: 500 });
   }
 }
@@ -73,16 +84,20 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const url = new URL(request.url);
-    const id = Number(url.searchParams.get('id'));
+    const id = url.searchParams.get('id');
 
-    const fileData = fs.readFileSync(dataFilePath, 'utf8');
-    let products = JSON.parse(fileData);
-    
-    products = products.filter((p: any) => p.id !== id);
-    fs.writeFileSync(dataFilePath, JSON.stringify(products, null, 2));
+    if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+
+    const { error } = await supabaseAdmin
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("Delete product err:", error);
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 });
   }
 }

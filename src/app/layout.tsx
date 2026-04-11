@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import ProfileNav from "./ProfileNav";
+import Link from "next/link";
+import SiteLogo from "./SiteLogo";
+import Navigation from "./Navigation";
+
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -18,6 +21,11 @@ export const metadata: Metadata = {
     locale: "en_NP",
     type: "website",
   },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -28,20 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <header className="main-header">
-          <div className="container">
-            <div className="logo">LYKA <span>Nepal</span></div>
-            <nav className="main-nav">
-              <a href="#clothes">Clothes</a>
-              <a href="#bags">Bags</a>
-              <a href="#shoes">Shoes</a>
-              <a href="#cart" className="cart-link">Cart (0)</a>
-            </nav>
-            <div style={{ marginLeft: "auto", display: "flex", gap: "1rem" }}>
-              <ProfileNav />
-            </div>
-          </div>
-        </header>
+        <Navigation />
         <main>{children}</main>
         <footer className="main-footer">
           <div className="container">

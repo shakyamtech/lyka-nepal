@@ -11,20 +11,43 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
 
+  // New QR flow states
+  const [showQR, setShowQR] = useState(false);
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+
   // Autofill forms
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
 
+  const [heroBg, setHeroBg] = useState(""); // Dynamic Hero Background
+
   useEffect(() => {
-    setCustomerName(localStorage.getItem("customerName") || "");
-    setCustomerEmail(localStorage.getItem("customerEmail") || "");
-    
     fetch('/api/products')
       .then(res => res.json())
       .then(data => {
         setProducts(data);
         setLoading(false);
       });
+
+    // Handle hash changes to automatically set the filter when clicking header links
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (['Clothes', 'Bags', 'Shoes'].includes(hash)) {
+        setCategoryFilter(hash);
+        document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    // Trigger on initial load as well
+    handleHashChange();
+
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (baseUrl) {
+      setHeroBg(`${baseUrl}/storage/v1/object/public/site-assets/hero-bg.png?v=${Date.now()}`);
+    }
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const addToCart = (product: any) => {
@@ -35,31 +58,54 @@ export default function Home() {
       method: 'POST',
       body: JSON.stringify({ type: 'CART_ADD', message: `Customer added ${product.name} to their bag.` })
     }).catch(()=>{});
+
+    // Automatically navigate user down to the billing/payment section
+    setTimeout(() => {
+      document.getElementById('cart')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
-  const handleCheckout = async (e: React.FormEvent) => {
+  const handleCheckout = (e: React.FormEvent) => {
     e.preventDefault();
+    if (cart.length === 0) return;
+    
+    // Switch view to QR mode instead of hitting API
+    setShowQR(true);
+  };
+
+  const handleFinalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!paymentScreenshot) {
+      alert("Please upload your payment screenshot before submitting.");
+      return;
+    }
+
     setIsProcessing(true);
     
-    // Notify admin of successful intent
-    fetch('/api/notifications', {
-      method: 'POST',
-      body: JSON.stringify({ type: 'PURCHASE', message: `Customer just completed a purchase of NPR ${totalBill}!` })
-    }).catch(()=>{});
-    
+    const formData = new FormData();
+    formData.append('items', JSON.stringify(cart));
+    formData.append('total', totalBill.toString());
+    formData.append('name', customerName || "LYKA Guest");
+    formData.append('email', customerEmail || "guest@lykanepal.com");
+    if (paymentScreenshot) formData.append('screenshot', paymentScreenshot);
+
     try {
-      const response = await fetch('/api/checkout', {
+      const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart, total: totalBill, name: customerName || "LYKA Guest", email: customerEmail || "guest@lykanepal.com" })
+        body: formData
       });
       
       const data = await response.json();
-      if (data.success && data.paymentUrl) {
-        window.location.href = data.paymentUrl;
+      if (data.success) {
+        // Redirect to success page indicating verification is pending
+        window.location.href = `/success?orderId=${data.orderId}&total=${totalBill}&status=pending`;
+      } else {
+        alert("Failed to submit order. Please try again.");
+        setIsProcessing(false);
       }
     } catch (err) {
-      alert("Failed to process payment.");
+      alert("Network error.");
       setIsProcessing(false);
     }
   };
@@ -74,36 +120,37 @@ export default function Home() {
 
   return (
     <>
-      <section className="hero">
-        <div className="container">
-          <h1>New Arrivals</h1>
-          <p>Discover the finest women's fashion in Imadole.</p>
+      <section 
+        className="hero" 
+        style={heroBg ? { 
+          backgroundImage: `url(${heroBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed' // Parallax Effect
+        } : {}}
+      >
+        <div className="hero-overlay">
+          <div className="container">
+            <h1>New Arrivals</h1>
+            <p>Discover the finest women's fashion in Imadole.</p>
+          </div>
         </div>
       </section>
 
-      <section className="catalog container" id="clothes">
+      <section className="catalog container" id="catalog">
         <div className="catalog-header">
           <h2>Our Collection</h2>
           <p>Clothes, Bags, and Shoes carefully curated for you.</p>
         </div>
 
         {/* Filters and Search */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3rem", flexWrap: "wrap", gap: "1rem" }}>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div className="catalog-filters">
+          <div className="filter-group">
             {["All", "Clothes", "Bags", "Shoes"].map(cat => (
               <button 
                 key={cat} 
                 onClick={() => setCategoryFilter(cat)} 
-                style={{ 
-                  padding: "0.5rem 1.5rem", 
-                  borderRadius: "50px", 
-                  border: "1px solid var(--border)", 
-                  background: categoryFilter === cat ? "var(--foreground)" : "transparent", 
-                  color: categoryFilter === cat ? "white" : "var(--foreground)", 
-                  cursor: "pointer", 
-                  transition: "0.2s",
-                  fontWeight: "500"
-                }}
+                className={`filter-btn ${categoryFilter === cat ? "active" : ""}`}
               >
                 {cat}
               </button>
@@ -114,13 +161,7 @@ export default function Home() {
             placeholder="Search products..." 
             value={searchTerm} 
             onChange={e => setSearchTerm(e.target.value)} 
-            style={{ 
-              padding: "0.5rem 1.5rem", 
-              borderRadius: "50px", 
-              border: "1px solid var(--border)", 
-              width: "300px",
-              fontFamily: "inherit"
-            }}
+            className="search-input"
           />
         </div>
 
@@ -165,15 +206,57 @@ export default function Home() {
                 <span>Total Amount:</span>
                 <span>NPR {totalBill}</span>
               </div>
-              <form className="checkout-form" onSubmit={handleCheckout}>
-                <input type="text" placeholder="Full Name" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
-                <input type="email" placeholder="Email Address" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} required />
-                <input type="tel" placeholder="Phone Number" required />
-                <textarea placeholder="Delivery Address (e.g., Imadole Area)" required></textarea>
-                <button type="submit" className="checkout-btn" disabled={isProcessing}>
-                  {isProcessing ? "Processing Secure Payment..." : "Pay via Stripe/eSewa"}
-                </button>
-              </form>
+              {!showQR ? (
+                <form className="checkout-form" onSubmit={handleCheckout}>
+                  <input type="text" placeholder="Full Name" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
+                  <input type="email" placeholder="Email Address" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} required />
+                  <input type="tel" placeholder="Phone Number" required />
+                  <textarea placeholder="Delivery Address (e.g., Imadole Area)" required></textarea>
+                  <button type="submit" className="checkout-btn">
+                    Proceed to Payment
+                  </button>
+                </form>
+              ) : (
+                <form className="checkout-form complete-payment" onSubmit={handleFinalSubmit} style={{ marginTop: '2rem', padding: '1rem', border: '1px dashed var(--primary)', borderRadius: '8px', background: '#fafafa' }}>
+                  <h3 style={{ marginBottom: "1rem", color: "var(--foreground)" }}>Step 2: Pay & Verify</h3>
+                  <div style={{ padding: "0", background: "white", margin: "0 auto 1.5rem", width: "fit-content", borderRadius: "12px", border: "1px solid var(--border)", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", overflow: "hidden" }}>
+                    {/* Dynamic QR Graphic */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "200px", minWidth: "200px" }}>
+                        <img 
+                          src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/site-assets/qr.png?v=${Date.now()}`} 
+                          alt="Store QR Code" 
+                          unselectable="on"
+                          style={{ width: "250px", height: "100%", objectFit: "cover" }}
+                          onError={(e) => {
+                             // Fallback to text if QR isn't uploaded yet
+                             e.currentTarget.style.display = 'none';
+                             e.currentTarget.parentElement!.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; font-size: 0.9rem;"><strong>NPR ' + totalBill + '</strong><br/><br/>(Please ask Admin to<br/>upload QR code in Dashboard)</div>';
+                          }}
+                       />
+                    </div>
+                  </div>
+                  
+                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: "bold" }}>
+                    After paying, upload a screenshot of your transaction:
+                  </label>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={e => setPaymentScreenshot(e.target.files?.[0] || null)} 
+                    required 
+                    style={{ marginBottom: "1.5rem" }} 
+                  />
+                  
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button type="button" onClick={() => setShowQR(false)} style={{ flex: 1, padding: "0.8rem", background: "white", border: "1px solid var(--border)", borderRadius: "4px", cursor: "pointer" }}>
+                      ← Back
+                    </button>
+                    <button type="submit" className="checkout-btn" disabled={isProcessing} style={{ flex: 2, margin: 0 }}>
+                      {isProcessing ? "Uploading..." : "Submit Payment"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
         </div>
