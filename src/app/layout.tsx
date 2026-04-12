@@ -9,7 +9,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "LYKA Nepal | Premium Women's Clothing, Bags & Shoes in Imadole",
+  title: "LYKA Nepal | Premium Women's Clothing, Bags & Accessories & Shoes in Imadole",
   description: "Shop the latest trends in women's fashion at LYKA Nepal. Discover our premium collection of clothes, bags, and shoes located in Imadole.",
   keywords: "LYKA Nepal, women clothing, bags, shoes, fashion, Imadole, Kathmandu fashion, online shopping Nepal",
   openGraph: {

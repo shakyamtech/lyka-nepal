@@ -323,7 +323,7 @@ export default function AdminPage() {
             <input type="text" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} required />
             <select value={category} onChange={(e) => setCategory(e.target.value)} required>
               <option value="Clothes">Clothes</option>
-              <option value="Bags">Bags</option>
+              <option value="Bags">Bags & Accessories</option>
               <option value="Shoes">Shoes</option>
             </select>
             <input type="number" placeholder="Price (NPR)" value={price} onChange={(e) => setPrice(e.target.value)} required />

@@ -86,6 +86,12 @@ export default function Home() {
     }, 100);
   };
 
+  const removeFromCart = (index: number) => {
+    const newCart = [...cart];
+    newCart.splice(index, 1);
+    setCart(newCart);
+  };
+
   const handleCheckout = (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
@@ -161,17 +167,17 @@ export default function Home() {
       <section className="catalog container" id="catalog">
         <div className="catalog-header">
           <h2>Our Collection</h2>
-          <p>Clothes, Bags, and Shoes carefully curated for you.</p>
+          <p>Clothes, Bags & Accessories, and Shoes carefully curated for you.</p>
         </div>
 
         {/* Filters and Search */}
         <div className="catalog-filters">
           <div className="filter-group">
-            {["All", "Clothes", "Bags", "Shoes"].map(cat => (
+            {["All", "Clothes", "Bags & Accessories", "Shoes"].map(cat => (
               <button 
                 key={cat} 
-                onClick={() => setCategoryFilter(cat)} 
-                className={`filter-btn ${categoryFilter === cat ? "active" : ""}`}
+                onClick={() => setCategoryFilter(cat === "Bags & Accessories" ? "Bags" : cat)} 
+                className={`filter-btn ${categoryFilter === (cat === "Bags & Accessories" ? "Bags" : cat) ? "active" : ""}`}
               >
                 {cat}
               </button>
@@ -226,9 +232,18 @@ export default function Home() {
             <div className="bill-details">
               <ul className="cart-list">
                 {cart.map((item, index) => (
-                  <li key={index}>
-                    <span>{item.name}</span>
-                    <span>NPR {item.price}</span>
+                  <li key={index} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <strong>{item.name}</strong>
+                      <span style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>NPR {item.price}</span>
+                    </div>
+                    <button 
+                      onClick={() => removeFromCart(index)}
+                      style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.2rem", padding: "0.5rem" }}
+                      title="Remove item"
+                    >
+                      ✕
+                    </button>
                   </li>
                 ))}
               </ul>

@@ -48,7 +48,7 @@ export default function Navigation() {
           {/* Desktop Nav */}
           <nav className="main-nav desktop-only">
             <Link href="/#Clothes">Clothes</Link>
-            <Link href="/#Bags">Bags</Link>
+            <Link href="/#Bags">Bags & Accessories</Link>
             <Link href="/#Shoes">Shoes</Link>
             <Link href="/#cart" className="cart-link">Bag ({cartCount})</Link>
           </nav>
