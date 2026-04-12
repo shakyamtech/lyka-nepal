@@ -33,13 +33,18 @@ export async function POST(request: Request) {
               .single();
 
             if (product) {
-              await supabaseAdmin
+              const { error: updError } = await supabaseAdmin
                 .from('products')
                 .update({
                   stock: Math.max(0, product.stock - 1),
                   sales_count: (product.sales_count || 0) + 1
                 })
                 .eq('id', item.id);
+              
+              if (updError) {
+                console.error(`Failed to update stock for product ${item.id}:`, updError);
+                return NextResponse.json({ error: `Could not update stock for product: ${item.name}` }, { status: 500 });
+              }
             }
         }
       }

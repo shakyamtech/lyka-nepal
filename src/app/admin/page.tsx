@@ -27,6 +27,10 @@ export default function AdminPage() {
   const [price, setPrice] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [stock, setStock] = useState("10");
+  const [description, setDescription] = useState("");
+  const [sizes, setSizes] = useState("");
+  const [isVerifying, setIsVerifying] = useState<string | null>(null); // orderId being verified
+  const lastSoundTimeRef = useRef<number>(0);
 
   // New User Form State
   const [newEmail, setNewEmail] = useState("");
@@ -88,10 +92,12 @@ export default function AdminPage() {
         if (data.length > 0) {
           lastCheckRef.current = Date.now();
           data.forEach((n: any) => {
-            if (!playedSoundsRef.current.has(n.timestamp)) {
+            const now = Date.now();
+            if (!playedSoundsRef.current.has(n.timestamp) && (now - lastSoundTimeRef.current > 1000)) {
               if (n.type === 'CART_ADD') playSimpleDing();
               if (n.type === 'PURCHASE') playSweetDing();
               playedSoundsRef.current.add(n.timestamp);
+              lastSoundTimeRef.current = now;
             }
             setNotifications(prev => [n, ...prev].slice(0, 5));
           });
@@ -157,6 +163,7 @@ export default function AdminPage() {
   // Handlers
   const handleVerifyOrder = async (orderId: string, action: 'VERIFY' | 'REJECT') => {
     if (!confirm(`Are you sure you want to ${action} this order?`)) return;
+    setIsVerifying(orderId);
     try {
       const res = await fetch("/api/orders/verify", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -171,6 +178,8 @@ export default function AdminPage() {
       }
     } catch (e) {
       alert("Network error while verifying order.");
+    } finally {
+      setIsVerifying(null);
     }
   };
   
@@ -187,9 +196,12 @@ export default function AdminPage() {
     const formData = new FormData();
     formData.append('name', name); formData.append('category', category);
     formData.append('price', price); formData.append('stock', stock);
+    formData.append('description', description);
+    formData.append('sizes', sizes);
     formData.append('image', imageFile);
     await fetch("/api/products", { method: "POST", body: formData });
     setName(""); setPrice(""); setImageFile(null); setStock("10");
+    setDescription(""); setSizes("");
     fetchProducts();
   };
 
@@ -342,6 +354,10 @@ export default function AdminPage() {
             </select>
             <input type="number" placeholder="Price (NPR)" value={price} onChange={(e) => setPrice(e.target.value)} required />
             <input type="number" placeholder="Stock" value={stock} onChange={(e) => setStock(e.target.value)} required />
+            <textarea placeholder="Product Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", minHeight: "80px" }}></textarea>
+            {['Clothes', 'Shoes'].includes(category) && (
+              <input type="text" placeholder="Sizes (e.g. M, L, XL or 38, 40)" value={sizes} onChange={(e) => setSizes(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
+            )}
             <label style={{ fontSize: "0.9rem", marginTop: "0.5rem", fontWeight: "bold" }}>Upload Photo:</label>
             <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} required style={{ border: "none", padding: "0" }} />
             <button type="submit" style={{ marginTop: "1rem" }}>Add Product</button>
@@ -369,6 +385,7 @@ export default function AdminPage() {
                 <div className="item-details">
                   <h4>{p.name}</h4>
                   <span>NPR {p.price} | {p.category} | Stock: {p.stock}</span>
+                  {p.sizes && <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>Sizes: {p.sizes}</p>}
                 </div>
                 <button className="delete-btn" onClick={() => handleDelete(p.id)}>Delete</button>
               </div>
@@ -435,8 +452,20 @@ export default function AdminPage() {
                     <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                       {(!order.status || order.status === 'Pending Verification') && (
                         <>
-                          <button onClick={() => handleVerifyOrder(order.id, 'VERIFY')} style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>☑ Verify Payment</button>
-                          <button onClick={() => handleVerifyOrder(order.id, 'REJECT')} style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>✕ Reject</button>
+                          <button 
+                            disabled={isVerifying === order.id}
+                            onClick={() => handleVerifyOrder(order.id, 'VERIFY')} 
+                            style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
+                          >
+                            {isVerifying === order.id ? "⌛ Verifying..." : "☑ Verify Payment"}
+                          </button>
+                          <button 
+                            disabled={isVerifying === order.id}
+                            onClick={() => handleVerifyOrder(order.id, 'REJECT')} 
+                            style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
+                          >
+                            {isVerifying === order.id ? "..." : "✕ Reject"}
+                          </button>
                         </>
                       )}
                       <button 

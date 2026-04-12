@@ -30,6 +30,8 @@ export async function POST(request: Request) {
     const category = formData.get('category') as string;
     const price = formData.get('price') as string;
     const stock = formData.get('stock') as string;
+    const description = formData.get('description') as string;
+    const sizes = formData.get('sizes') as string; // Comma-separated list
     const file = formData.get('image') as File | null;
     
     let imageUrl = "";
@@ -67,6 +69,8 @@ export async function POST(request: Request) {
         price: Number(price),
         image: imageUrl || "https://dummyimage.com/400x500/ccc/fff.png",
         stock: Number(stock) || 10,
+        description: description || "",
+        sizes: sizes || "",
         sales_count: 0
       }])
       .select()

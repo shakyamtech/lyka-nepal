@@ -11,6 +11,7 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [selectedSizes, setSelectedSizes] = useState<{[key: number]: string}>({});
 
   // New QR flow states
   const [showQR, setShowQR] = useState(false);
@@ -72,12 +73,26 @@ export default function Home() {
   }, [cart, loading]);
 
   const addToCart = (product: any) => {
-    setCart([...cart, product]);
+    // Check if size selection is required
+    if (['Clothes', 'Shoes'].includes(product.category) && product.sizes) {
+      if (!selectedSizes[product.id]) {
+        alert("Please select a size first!");
+        // Scroll slightly to the product card if needed
+        return;
+      }
+    }
+
+    const itemToAdd = {
+      ...product,
+      selectedSize: selectedSizes[product.id] || null
+    };
+
+    setCart([...cart, itemToAdd]);
     
     // Silent notification to admin
     fetch('/api/notifications', {
       method: 'POST',
-      body: JSON.stringify({ type: 'CART_ADD', message: `Customer added ${product.name} to their bag.` })
+      body: JSON.stringify({ type: 'CART_ADD', message: `Customer added ${product.name} ${itemToAdd.selectedSize ? `(Size: ${itemToAdd.selectedSize})` : ''} to their bag.` })
     }).catch(()=>{});
 
     // Automatically navigate user down to the billing/payment section
@@ -210,8 +225,37 @@ export default function Home() {
                 <div>
                   <span className="category">{product.category}</span>
                   <h3>{product.name}</h3>
+                  {product.description && <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem", lineHeight: "1.4" }}>{product.description}</p>}
                   <p className="price">NPR {product.price}</p>
                 </div>
+
+                {/* Size Selection for Clothes/Shoes */}
+                {['Clothes', 'Shoes'].includes(product.category) && product.sizes && (
+                  <div style={{ margin: "1rem 0" }}>
+                    <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Select Size:</p>
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      {product.sizes.split(',').map((s: string) => (
+                        <button
+                          key={s}
+                          onClick={() => setSelectedSizes(prev => ({ ...prev, [product.id]: s.trim() }))}
+                          style={{
+                            padding: "0.4rem 0.8rem",
+                            border: `1px solid ${selectedSizes[product.id] === s.trim() ? "var(--primary)" : "#e5e7eb"}`,
+                            background: selectedSizes[product.id] === s.trim() ? "var(--primary)" : "white",
+                            color: selectedSizes[product.id] === s.trim() ? "white" : "var(--foreground)",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontSize: "0.8rem",
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          {s.trim()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {product.stock > 0 ? (
                   <button className="add-btn" onClick={() => addToCart(product)}>Add to Bag</button>
                 ) : (
@@ -234,7 +278,7 @@ export default function Home() {
                 {cart.map((item, index) => (
                   <li key={index} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      <strong>{item.name}</strong>
+                      <strong>{item.name} {item.selectedSize && <span style={{ color: "var(--primary)", fontSize: "0.8rem" }}>(Size: {item.selectedSize})</span>}</strong>
                       <span style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>NPR {item.price}</span>
                     </div>
                     <button 
