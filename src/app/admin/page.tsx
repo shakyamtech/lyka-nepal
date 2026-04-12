@@ -19,6 +19,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [orderSearchTerm, setOrderSearchTerm] = useState("");
   
   // New Product Form State
   const [name, setName] = useState("");
@@ -157,6 +158,13 @@ export default function AdminPage() {
       body: JSON.stringify({ orderId, action })
     });
     fetchOrders(); fetchProducts();
+  };
+  
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm(`Are you sure you want to permanently delete order ${orderId}? This history cannot be recovered.`)) return;
+    const res = await fetch(`/api/orders?id=${orderId}`, { method: "DELETE" });
+    if (res.ok) fetchOrders();
+    else alert("Failed to delete order.");
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -360,12 +368,37 @@ export default function AdminPage() {
         <h2>Customer Orders & Payments</h2>
         <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Review uploaded payment screenshots and verify orders to deduct inventory stock.</p>
         
+        <div style={{ marginBottom: "2rem", display: "flex", gap: "1rem" }}>
+          <input 
+            type="text" 
+            placeholder="Search by ID, Name, or Email..." 
+            value={orderSearchTerm} 
+            onChange={(e) => setOrderSearchTerm(e.target.value)}
+            style={{ flex: 1, padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "8px" }}
+          />
+          {orderSearchTerm && (
+            <button 
+              onClick={() => setOrderSearchTerm("")}
+              style={{ padding: "0.8rem 1.5rem", background: "#e5e7eb", border: "none", borderRadius: "8px", cursor: "pointer" }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        
         {orders.length === 0 ? (
           <p>No orders yet.</p>
         ) : (
           <div className="order-queue">
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-              {orders.map(order => (
+              {orders
+                .filter(order => {
+                  const s = orderSearchTerm.toLowerCase();
+                  return order.id.toLowerCase().includes(s) || 
+                         order.name.toLowerCase().includes(s) || 
+                         order.email.toLowerCase().includes(s);
+                })
+                .map(order => (
                 <div key={order.id} style={{ background: "white", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", gap: "2rem", flexWrap: "wrap" }}>
                   <div style={{ flex: "1 1 300px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
@@ -385,12 +418,20 @@ export default function AdminPage() {
                     <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
                     <p><strong>Total:</strong> NPR {order.total}</p>
                     
-                    {(!order.status || order.status === 'Pending Verification') && (
-                      <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
-                        <button onClick={() => handleVerifyOrder(order.id, 'VERIFY')} style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>☑ Verify Payment</button>
-                        <button onClick={() => handleVerifyOrder(order.id, 'REJECT')} style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>✕ Reject</button>
-                      </div>
-                    )}
+                    <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                      {(!order.status || order.status === 'Pending Verification') && (
+                        <>
+                          <button onClick={() => handleVerifyOrder(order.id, 'VERIFY')} style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>☑ Verify Payment</button>
+                          <button onClick={() => handleVerifyOrder(order.id, 'REJECT')} style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>✕ Reject</button>
+                        </>
+                      )}
+                      <button 
+                        onClick={() => handleDeleteOrder(order.id)} 
+                        style={{ padding: "0.5rem 1rem", background: "none", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: "4px", cursor: "pointer", fontSize: "0.85rem" }}
+                      >
+                        🗑 Delete Record
+                      </button>
+                    </div>
                   </div>
                   
                   {order.screenshotUrl && (

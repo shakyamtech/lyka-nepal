@@ -103,3 +103,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to submit order' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from('orders')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Delete order err:", error);
+    return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 });
+  }
+}
