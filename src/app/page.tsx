@@ -140,6 +140,10 @@ export default function Home() {
       
       const data = await response.json();
       if (data.success) {
+        // Clear cart after successful submission
+        setCart([]);
+        localStorage.removeItem('lyka_cart');
+        
         // Redirect to success page indicating verification is pending
         window.location.href = `/success?orderId=${data.orderId}&total=${totalBill}&status=pending`;
       } else {
