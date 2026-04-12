@@ -225,8 +225,19 @@ export default function Home() {
                 <div>
                   <span className="category">{product.category}</span>
                   <h3>{product.name}</h3>
-                  {product.description && <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem", lineHeight: "1.4" }}>{product.description}</p>}
                   <p className="price">NPR {product.price}</p>
+                  {product.description && (
+                    <p style={{ 
+                      fontSize: "0.9rem", 
+                      color: "#4b5563", 
+                      marginTop: "0.75rem", 
+                      lineHeight: "1.5", 
+                      borderTop: "1px solid #f3f4f6", 
+                      paddingTop: "0.75rem" 
+                    }}>
+                      {product.description}
+                    </p>
+                  )}
                 </div>
 
                 {/* Size Selection for Clothes/Shoes */}
