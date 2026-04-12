@@ -347,7 +347,13 @@ export default function AdminPage() {
           <h2>Add New Product</h2>
           <form className="add-product-form" onSubmit={handleAddProduct}>
             <input type="text" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} required />
-            <select value={category} onChange={(e) => setCategory(e.target.value)} required>
+            <select value={category} onChange={(e) => {
+              const cat = e.target.value;
+              setCategory(cat);
+              if (cat === 'Clothes') setSizes('M, XL, XXL');
+              else if (cat === 'Shoes') setSizes('36, 37, 38, 39, 40, 41, 42');
+              else setSizes('');
+            }} required>
               <option value="Clothes">Clothes</option>
               <option value="Bags">Bags & Accessories</option>
               <option value="Shoes">Shoes</option>
@@ -355,8 +361,39 @@ export default function AdminPage() {
             <input type="number" placeholder="Price (NPR)" value={price} onChange={(e) => setPrice(e.target.value)} required />
             <input type="number" placeholder="Stock" value={stock} onChange={(e) => setStock(e.target.value)} required />
             <textarea placeholder="Product Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", minHeight: "80px" }}></textarea>
-            {['Clothes', 'Shoes'].includes(category) && (
-              <input type="text" placeholder="Sizes (e.g. M, L, XL or 38, 40)" value={sizes} onChange={(e) => setSizes(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
+            {category === 'Clothes' && (
+              <div style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", background: "#f9fafb" }}>
+                <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Select Clothing Sizes:</p>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  {['M', 'XL', 'XXL'].map(s => (
+                    <label key={s} style={{ display: "flex", alignItems: "center", gap: "0.3rem", cursor: "pointer", padding: "0.4rem 0.8rem", border: `1px solid ${sizes.split(',').map(x=>x.trim()).includes(s) ? 'var(--primary)' : '#e5e7eb'}`, borderRadius: "4px", background: sizes.split(',').map(x=>x.trim()).includes(s) ? 'var(--primary)' : 'white', color: sizes.split(',').map(x=>x.trim()).includes(s) ? 'white' : 'inherit', fontSize: "0.85rem", fontWeight: "600" }}>
+                      <input type="checkbox" checked={sizes.split(',').map(x=>x.trim()).includes(s)} onChange={(e) => {
+                        const current = sizes.split(',').map(x=>x.trim()).filter(Boolean);
+                        if (e.target.checked) setSizes([...current, s].join(', '));
+                        else setSizes(current.filter(x => x !== s).join(', '));
+                      }} style={{ display: "none" }} />
+                      {s}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            {category === 'Shoes' && (
+              <div style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", background: "#f9fafb" }}>
+                <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Select Shoe Sizes:</p>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  {['36', '37', '38', '39', '40', '41', '42'].map(s => (
+                    <label key={s} style={{ display: "flex", alignItems: "center", gap: "0.3rem", cursor: "pointer", padding: "0.4rem 0.8rem", border: `1px solid ${sizes.split(',').map(x=>x.trim()).includes(s) ? 'var(--primary)' : '#e5e7eb'}`, borderRadius: "4px", background: sizes.split(',').map(x=>x.trim()).includes(s) ? 'var(--primary)' : 'white', color: sizes.split(',').map(x=>x.trim()).includes(s) ? 'white' : 'inherit', fontSize: "0.85rem", fontWeight: "600" }}>
+                      <input type="checkbox" checked={sizes.split(',').map(x=>x.trim()).includes(s)} onChange={(e) => {
+                        const current = sizes.split(',').map(x=>x.trim()).filter(Boolean);
+                        if (e.target.checked) setSizes([...current, s].join(', '));
+                        else setSizes(current.filter(x => x !== s).join(', '));
+                      }} style={{ display: "none" }} />
+                      {s}
+                    </label>
+                  ))}
+                </div>
+              </div>
             )}
             <label style={{ fontSize: "0.9rem", marginTop: "0.5rem", fontWeight: "bold" }}>Upload Photo:</label>
             <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} required style={{ border: "none", padding: "0" }} />
