@@ -37,6 +37,7 @@ export default function AdminPage() {
   // Notification State
   const [notifications, setNotifications] = useState<any[]>([]);
   const lastCheckRef = useRef(Date.now());
+  const playedSoundsRef = useRef<Set<number>>(new Set());
 
   // Web Audio Generators
   const playSimpleDing = () => {
@@ -87,8 +88,11 @@ export default function AdminPage() {
         if (data.length > 0) {
           lastCheckRef.current = Date.now();
           data.forEach((n: any) => {
-            if (n.type === 'CART_ADD') playSimpleDing();
-            if (n.type === 'PURCHASE') playSweetDing();
+            if (!playedSoundsRef.current.has(n.timestamp)) {
+              if (n.type === 'CART_ADD') playSimpleDing();
+              if (n.type === 'PURCHASE') playSweetDing();
+              playedSoundsRef.current.add(n.timestamp);
+            }
             setNotifications(prev => [n, ...prev].slice(0, 5));
           });
         }
@@ -153,11 +157,21 @@ export default function AdminPage() {
   // Handlers
   const handleVerifyOrder = async (orderId: string, action: 'VERIFY' | 'REJECT') => {
     if (!confirm(`Are you sure you want to ${action} this order?`)) return;
-    await fetch("/api/orders/verify", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, action })
-    });
-    fetchOrders(); fetchProducts();
+    try {
+      const res = await fetch("/api/orders/verify", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, action })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`Order ${orderId} has been successfully ${action.toLowerCase()}ed.`);
+        fetchOrders(); fetchProducts();
+      } else {
+        alert("Verification failed: " + (data.error || "Unknown error"));
+      }
+    } catch (e) {
+      alert("Network error while verifying order.");
+    }
   };
   
   const handleDeleteOrder = async (orderId: string) => {

@@ -75,7 +75,7 @@ export default function Navigation() {
         </div>
         <nav className="side-nav">
           <Link href="/#Clothes" onClick={closeMenu}>Clothes</Link>
-          <Link href="/#Bags" onClick={closeMenu}>Bags</Link>
+          <Link href="/#Bags" onClick={closeMenu}>Bags & Accessories</Link>
           <Link href="/#Shoes" onClick={closeMenu}>Shoes</Link>
           <div className="side-nav-footer">
             <Link href="/#cart" className="cart-link" onClick={closeMenu}>Bag ({cartCount})</Link>
