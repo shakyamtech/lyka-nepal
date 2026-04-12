@@ -20,6 +20,8 @@ export default function Home() {
   // Autofill forms
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
 
   const [heroBg, setHeroBg] = useState(""); // Dynamic Hero Background
 
@@ -130,6 +132,8 @@ export default function Home() {
     formData.append('total', totalBill.toString());
     formData.append('name', customerName || "LYKA Guest");
     formData.append('email', customerEmail || "guest@lykanepal.com");
+    formData.append('phone', customerPhone);
+    formData.append('address', customerAddress);
     if (paymentScreenshot) formData.append('screenshot', paymentScreenshot);
 
     try {
@@ -314,8 +318,8 @@ export default function Home() {
                 <form className="checkout-form" onSubmit={handleCheckout}>
                   <input type="text" placeholder="Full Name" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
                   <input type="email" placeholder="Email Address" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} required />
-                  <input type="tel" placeholder="Phone Number" required />
-                  <textarea placeholder="Delivery Address (e.g., Imadole Area)" required></textarea>
+                  <input type="tel" placeholder="Phone Number" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required />
+                  <textarea placeholder="Delivery Address (e.g., Imadole Area)" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} required></textarea>
                   <button type="submit" className="checkout-btn">
                     Proceed to Payment
                   </button>

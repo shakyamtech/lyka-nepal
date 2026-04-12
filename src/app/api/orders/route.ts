@@ -23,6 +23,8 @@ export async function GET(request: Request) {
       id: o.id,
       email: o.customer_email,
       name: o.customer_name,
+      phone: o.customer_phone,
+      address: o.customer_address,
       items: (o.items as any).map((i: any) => i.name),
       rawItems: o.items,
       total: o.total,
@@ -45,6 +47,8 @@ export async function POST(request: Request) {
     const total = formData.get('total');
     const name = formData.get('name');
     const email = formData.get('email');
+    const phone = formData.get('phone');
+    const address = formData.get('address');
     const screenshot = formData.get('screenshot') as File | null;
     
     let screenshotUrl = '';
@@ -80,6 +84,8 @@ export async function POST(request: Request) {
         id: orderId,
         customer_name: name,
         customer_email: email,
+        customer_phone: phone,
+        customer_address: address,
         items: items, // jsonb handles this
         total: Number(total),
         screenshot_url: screenshotUrl,
