@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import "./page.css";
 
@@ -12,6 +12,20 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [selectedSizes, setSelectedSizes] = useState<{[key: number]: string}>({});
+  
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const scrollLeft = () => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: -350, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: 350, behavior: 'smooth' });
+    }
+  };
 
   // New QR flow states
   const [showQR, setShowQR] = useState(false);
@@ -168,6 +182,76 @@ export default function Home() {
     return matchesSearch && matchesCategory;
   });
 
+  const ProductCard = ({ product }: { product: any }) => (
+    <div className="product-card">
+      <div className="product-image" style={{ position: 'relative' }}>
+        <Image
+          src={product.image}
+          alt={product.name}
+          fill
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+          style={{ objectFit: 'cover' }}
+          priority={false}
+        />
+        {product.stock === 0 && (
+          <div style={{
+            position: 'absolute', top: '0.75rem', left: '0.75rem',
+            background: '#fff', color: '#111', fontSize: '0.68rem',
+            fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase',
+            padding: '0.3rem 0.7rem'
+          }}>Sold Out</div>
+        )}
+        {product.stock > 0 && (
+          <div className="hover-order-overlay" onClick={() => addToCart(product)}>
+            ORDER NOW
+          </div>
+        )}
+      </div>
+
+      <div className="product-info">
+        <div>
+          <h3>{product.name}</h3>
+          <p className="price">Rs.{product.price.toLocaleString()}</p>
+          {product.description && (
+            <p className="product-description">{product.description}</p>
+          )}
+        </div>
+
+        {['Clothes', 'Shoes'].includes(product.category) && product.sizes && (
+          <div className="size-selector">
+            <div className="size-buttons">
+              {product.sizes.split(',').filter(Boolean).map((sStr: string) => {
+                const parts = sStr.split(':');
+                const szName = parts[0].trim();
+                const szQty = parts.length > 1 ? Number(parts[1].trim()) : 1;
+
+                return (
+                  <button
+                    key={szName}
+                    disabled={szQty <= 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (szQty > 0) {
+                        setSelectedSizes(prev => ({ ...prev, [product.id]: szName }));
+                      }
+                    }}
+                    className={`size-btn ${selectedSizes[product.id] === szName ? 'selected' : ''}`}
+                    style={{ 
+                      opacity: szQty <= 0 ? 0.4 : 1, 
+                      cursor: szQty <= 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {szName} {szQty <= 0 && <span style={{ fontSize: '0.65rem', display: 'block', color: '#ef4444', fontWeight: 'bold' }}>Sold Out</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Hero */}
@@ -189,94 +273,77 @@ export default function Home() {
 
       {/* Catalog */}
       <section className="catalog container" id="catalog">
-        <div className="section-header">
-          <h2>Our Collection</h2>
-          <span style={{ fontSize: '0.82rem', color: '#999', fontStyle: 'italic' }}>Clothes · Bags &amp; Accessories · Shoes</span>
+        <div className="section-header" style={{ marginBottom: '1rem' }}>
+          <h2>New Arrivals</h2>
         </div>
-
-        <div className="catalog-filters">
-          <div className="filter-group">
-            {["All", "Clothes", "Bags & Accessories", "Shoes"].map(cat => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat === "Bags & Accessories" ? "Bags" : cat)}
-                className={`filter-btn ${categoryFilter === (cat === "Bags & Accessories" ? "Bags" : cat) ? "active" : ""}`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-          <input
-            type="search"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-
-        <div className="product-grid">
-          {filteredProducts.length === 0 && (
-            <p style={{ gridColumn: "1 / -1", textAlign: "center", color: "#999", padding: "4rem 0", fontStyle: "italic" }}>
-              No products found.
-            </p>
-          )}
-          {filteredProducts.map((product) => (
-            <div key={product.id} className="product-card">
-              <div className="product-image" style={{ position: 'relative' }}>
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                  style={{ objectFit: 'cover' }}
-                  priority={false}
-                />
-                {product.stock === 0 && (
-                  <div style={{
-                    position: 'absolute', top: '0.75rem', left: '0.75rem',
-                    background: '#fff', color: '#111', fontSize: '0.68rem',
-                    fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase',
-                    padding: '0.3rem 0.7rem'
-                  }}>Sold Out</div>
-                )}
-                {product.stock > 0 && (
-                  <div className="hover-order-overlay" onClick={() => addToCart(product)}>
-                    ORDER NOW
-                  </div>
-                )}
-              </div>
-
-              <div className="product-info">
-                <div>
-                  <h3>{product.name}</h3>
-                  <p className="price">Rs.{product.price.toLocaleString()}</p>
-                  {product.description && (
-                    <p className="product-description">{product.description}</p>
-                  )}
-                </div>
-
-                {['Clothes', 'Shoes'].includes(product.category) && product.sizes && (
-                  <div className="size-selector">
-                    <div className="size-buttons">
-                      {product.sizes.split(',').map((s: string) => (
-                        <button
-                          key={s}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedSizes(prev => ({ ...prev, [product.id]: s.trim() }));
-                          }}
-                          className={`size-btn ${selectedSizes[product.id] === s.trim() ? 'selected' : ''}`}
-                        >
-                          {s.trim()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+        
+        {/* Top Section: New Arrivals Slider */}
+        <div style={{ marginBottom: '1rem' }}>
+          <div className="slider-wrapper">
+            <button className="slider-arrow left" onClick={scrollLeft} aria-label="Scroll left">
+              <svg width="40" height="15" viewBox="0 0 32 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1 L1 6 L6 11 M1 6 L32 6"/></svg>
+            </button>
+            <div className="product-grid horizontal-scroll" ref={sliderRef}>
+              {products.length === 0 && (
+                <p style={{ gridColumn: "1 / -1", textAlign: "center", color: "#999", padding: "4rem 0", fontStyle: "italic" }}>
+                  No products found.
+                </p>
+              )}
+              {products.map((product) => <ProductCard key={`slider-${product.id}`} product={product} />)}
             </div>
-          ))}
+            <button className="slider-arrow right" onClick={scrollRight} aria-label="Scroll right">
+              <svg width="40" height="15" viewBox="0 0 32 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M26 1 L31 6 L26 11 M31 6 L0 6"/></svg>
+            </button>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2.5rem', marginBottom: '4rem' }}>
+            <button 
+              onClick={() => { document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' }) }} 
+              style={{ padding: '0.8rem 3rem', background: 'transparent', border: '1px solid #111', fontWeight: 'bold', letterSpacing: '0.15em', fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' }}
+              onMouseOver={(e) => { e.currentTarget.style.background = '#111'; e.currentTarget.style.color = '#fff' }}
+              onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#111' }}
+            >
+              VIEW ALL
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Section: Collection Grid */}
+        <div id="collection" style={{ paddingTop: '2rem' }}>
+          <div className="section-header" style={{ marginBottom: '2rem' }}>
+            <h2>Our Collection</h2>
+            <span style={{ fontSize: '0.82rem', color: '#999', fontStyle: 'italic' }}>Clothes · Bags &amp; Accessories · Shoes</span>
+          </div>
+
+          <div className="catalog-filters" style={{ marginBottom: '2rem' }}>
+            <div className="filter-group">
+              {["All", "Clothes", "Bags & Accessories", "Shoes"].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat === "Bags & Accessories" ? "Bags" : cat)}
+                  className={`filter-btn ${categoryFilter === (cat === "Bags & Accessories" ? "Bags" : cat) ? "active" : ""}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <input
+              type="search"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+
+          <div className="product-grid product-grid-regular">
+            {filteredProducts.length === 0 && (
+              <p style={{ gridColumn: "1 / -1", textAlign: "center", color: "#999", padding: "4rem 0", fontStyle: "italic" }}>
+                No products found.
+              </p>
+            )}
+            {filteredProducts.map((product) => <ProductCard key={`grid-${product.id}`} product={product} />)}
+          </div>
         </div>
       </section>
 

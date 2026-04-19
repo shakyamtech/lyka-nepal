@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     const name = formData.get('name') as string;
     const category = formData.get('category') as string;
     const price = formData.get('price') as string;
+    const cost = formData.get('cost') as string;
     const stock = formData.get('stock') as string;
     const description = formData.get('description') as string;
     const sizes = formData.get('sizes') as string; // Comma-separated list
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
         name,
         category,
         price: Number(price),
+        cost: Number(cost) || 0,
         image: imageUrl || "https://dummyimage.com/400x500/ccc/fff.png",
         stock: Number(stock) || 10,
         description: description || "",
@@ -108,12 +110,16 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { id, stock } = await request.json();
-    if (!id || stock === undefined) return NextResponse.json({ error: 'Missing id or stock' }, { status: 400 });
+    const { id, stock, cost } = await request.json();
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+    const updates: any = {};
+    if (stock !== undefined) updates.stock = Number(stock);
+    if (cost !== undefined) updates.cost = Number(cost);
 
     const { data, error } = await supabaseAdmin
       .from('products')
-      .update({ stock: Number(stock) })
+      .update(updates)
       .eq('id', id)
       .select();
 

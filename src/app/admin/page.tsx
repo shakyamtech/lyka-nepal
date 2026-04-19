@@ -3,6 +3,102 @@
 import { useState, useEffect, useRef } from "react";
 import "./admin.css";
 
+function AnalyticsSection({ orders, products }: { orders: any[], products: any[] }) {
+  const [filterItemId, setFilterItemId] = useState<string>("ALL");
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+  const verifiedOrders = orders.filter(o => o.status === 'Verified' || o.status === 'Paid & Verified' || !o.status);
+
+  const calcMetrics = (filteredOrders: any[]) => {
+    let revenue = 0;
+    let costTotal = 0;
+    
+    filteredOrders.forEach(o => {
+      // items array is JSON: { id, name, price, cost, ... }
+      if (!o.items || !Array.isArray(o.rawItems || o.items)) return;
+      const orderItems = o.rawItems || o.items;
+      
+      orderItems.forEach((item: any) => {
+        // Since o.items might be strings from an old schema map, we rely on rawItems if possible. 
+        // We ensure item is an object
+        if (typeof item !== 'object') return;
+
+        if (filterItemId !== "ALL" && String(item.id) !== String(filterItemId)) return;
+        
+        let itemCost = item.cost;
+        if (itemCost === undefined || itemCost === null) {
+          const liveProduct = products.find(p => p.id === item.id);
+          itemCost = liveProduct?.cost || 0;
+        }
+        let itemPrice = item.price || 0;
+        
+        revenue += Number(itemPrice);
+        costTotal += Number(itemCost);
+      });
+    });
+    
+    return {
+      revenue,
+      profit: revenue - costTotal,
+      margin: revenue > 0 ? ((revenue - costTotal) / revenue * 100).toFixed(1) : 0
+    };
+  };
+
+  const dailyMetrics = calcMetrics(verifiedOrders.filter(o => new Date(o.date) >= startOfDay));
+  const monthlyMetrics = calcMetrics(verifiedOrders.filter(o => new Date(o.date) >= startOfMonth));
+  const yearlyMetrics = calcMetrics(verifiedOrders.filter(o => new Date(o.date) >= startOfYear));
+
+  return (
+    <div style={{ marginBottom: "3rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+        <h2>Analytics & Profit Dashboard</h2>
+        <select 
+          value={filterItemId} 
+          onChange={e => setFilterItemId(e.target.value)}
+          style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--border)", fontFamily: "inherit" }}
+        >
+          <option value="ALL">All Products</option>
+          {products.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
+        {[
+          { label: "Today's Sales", metrics: dailyMetrics },
+          { label: "This Month", metrics: monthlyMetrics },
+          { label: "This Year", metrics: yearlyMetrics },
+        ].map((block, idx) => (
+          <div key={idx} style={{ background: "white", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--border)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+            <h3 style={{ color: "var(--text-muted)", fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "1rem" }}>{block.label}</h3>
+            <div style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--primary)", marginBottom: "0.5rem" }}>
+              NPR {block.metrics.revenue.toLocaleString()}
+            </div>
+            
+            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #f3f4f6", paddingTop: "0.8rem", marginTop: "0.5rem" }}>
+              <div>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Total Profit</p>
+                <p style={{ fontWeight: "600", color: block.metrics.profit >= 0 ? "#16a34a" : "#ef4444" }}>
+                  {block.metrics.profit >= 0 ? "+" : ""}NPR {block.metrics.profit.toLocaleString()}
+                </p>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Margin</p>
+                <p style={{ fontWeight: "600", color: "#4f46e5" }}>{block.metrics.margin}%</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   
@@ -25,10 +121,11 @@ export default function AdminPage() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Clothes");
   const [price, setPrice] = useState("");
+  const [cost, setCost] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [stock, setStock] = useState("10");
   const [description, setDescription] = useState("");
-  const [sizes, setSizes] = useState("");
+  const [sizeQuantities, setSizeQuantities] = useState<{[key:string]: string}>({});
   const [isVerifying, setIsVerifying] = useState<string | null>(null); // orderId being verified
   const lastSoundTimeRef = useRef<number>(0);
 
@@ -195,13 +292,28 @@ export default function AdminPage() {
     if (!imageFile) return alert("Please select an image file first.");
     const formData = new FormData();
     formData.append('name', name); formData.append('category', category);
-    formData.append('price', price); formData.append('stock', stock);
+    formData.append('price', price); formData.append('cost', cost);
     formData.append('description', description);
-    formData.append('sizes', sizes);
+    
+    let sizesStr = "";
+    let finalStock = stock;
+
+    if (['Clothes', 'Shoes'].includes(category)) {
+      const validSizes = Object.entries(sizeQuantities).filter(([, qty]) => Number(qty) > 0);
+      sizesStr = validSizes.map(([sz, qty]) => `${sz}:${qty}`).join(', ');
+      finalStock = validSizes.reduce((sum, [, qty]) => sum + Number(qty), 0).toString();
+      if (validSizes.length === 0) {
+         return alert("Please enter stock for at least one size.");
+      }
+    }
+
+    formData.append('stock', finalStock);
+    formData.append('sizes', sizesStr);
     formData.append('image', imageFile);
+
     await fetch("/api/products", { method: "POST", body: formData });
-    setName(""); setPrice(""); setImageFile(null); setStock("10");
-    setDescription(""); setSizes("");
+    setName(""); setPrice(""); setCost(""); setImageFile(null); setStock("10");
+    setDescription(""); setSizeQuantities({});
     fetchProducts();
   };
 
@@ -350,6 +462,9 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Analytics Dashboard */}
+      <AnalyticsSection orders={orders} products={products} />
+
       <div style={{ marginBottom: "3rem" }}>
         <h2>Top Selling Items</h2>
         <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
@@ -373,47 +488,54 @@ export default function AdminPage() {
             <select value={category} onChange={(e) => {
               const cat = e.target.value;
               setCategory(cat);
-              if (cat === 'Clothes') setSizes('M, XL, XXL');
-              else if (cat === 'Shoes') setSizes('36, 37, 38, 39, 40, 41, 42');
-              else setSizes('');
+              setSizeQuantities({});
             }} required>
               <option value="Clothes">Clothes</option>
               <option value="Bags">Bags & Accessories</option>
               <option value="Shoes">Shoes</option>
             </select>
-            <input type="number" placeholder="Price (NPR)" value={price} onChange={(e) => setPrice(e.target.value)} required />
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <input type="number" placeholder="Sale Price (NPR)" value={price} onChange={(e) => setPrice(e.target.value)} required style={{ flex: 1 }} />
+              <input type="number" placeholder="Your Cost (NPR)" value={cost} onChange={(e) => setCost(e.target.value)} required style={{ flex: 1 }} />
+            </div>
             <input type="number" placeholder="Stock" value={stock} onChange={(e) => setStock(e.target.value)} required />
             <textarea placeholder="Product Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", minHeight: "80px" }}></textarea>
             {category === 'Clothes' && (
               <div style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", background: "#f9fafb" }}>
-                <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Select Clothing Sizes:</p>
+                <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Clothing Inventory (Enter stock per size):</p>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {['M', 'XL', 'XXL'].map(s => (
-                    <label key={s} style={{ display: "flex", alignItems: "center", gap: "0.3rem", cursor: "pointer", padding: "0.4rem 0.8rem", border: `1px solid ${sizes.split(',').map(x=>x.trim()).includes(s) ? 'var(--primary)' : '#e5e7eb'}`, borderRadius: "4px", background: sizes.split(',').map(x=>x.trim()).includes(s) ? 'var(--primary)' : 'white', color: sizes.split(',').map(x=>x.trim()).includes(s) ? 'white' : 'inherit', fontSize: "0.85rem", fontWeight: "600" }}>
-                      <input type="checkbox" checked={sizes.split(',').map(x=>x.trim()).includes(s)} onChange={(e) => {
-                        const current = sizes.split(',').map(x=>x.trim()).filter(Boolean);
-                        if (e.target.checked) setSizes([...current, s].join(', '));
-                        else setSizes(current.filter(x => x !== s).join(', '));
-                      }} style={{ display: "none" }} />
-                      {s}
-                    </label>
+                  {['S', 'M', 'L', 'XL', 'XXL'].map(s => (
+                    <div key={s} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", width: "60px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: "600", textAlign: "center" }}>{s}</label>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        placeholder="0" 
+                        value={sizeQuantities[s] || ""} 
+                        onChange={(e) => setSizeQuantities(prev => ({ ...prev, [s]: e.target.value }))}
+                        style={{ padding: "0.4rem", textAlign: "center" }}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
             )}
             {category === 'Shoes' && (
               <div style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", background: "#f9fafb" }}>
-                <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Select Shoe Sizes:</p>
+                <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Shoe Inventory (Enter stock per size):</p>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {['36', '37', '38', '39', '40', '41', '42'].map(s => (
-                    <label key={s} style={{ display: "flex", alignItems: "center", gap: "0.3rem", cursor: "pointer", padding: "0.4rem 0.8rem", border: `1px solid ${sizes.split(',').map(x=>x.trim()).includes(s) ? 'var(--primary)' : '#e5e7eb'}`, borderRadius: "4px", background: sizes.split(',').map(x=>x.trim()).includes(s) ? 'var(--primary)' : 'white', color: sizes.split(',').map(x=>x.trim()).includes(s) ? 'white' : 'inherit', fontSize: "0.85rem", fontWeight: "600" }}>
-                      <input type="checkbox" checked={sizes.split(',').map(x=>x.trim()).includes(s)} onChange={(e) => {
-                        const current = sizes.split(',').map(x=>x.trim()).filter(Boolean);
-                        if (e.target.checked) setSizes([...current, s].join(', '));
-                        else setSizes(current.filter(x => x !== s).join(', '));
-                      }} style={{ display: "none" }} />
-                      {s}
-                    </label>
+                    <div key={s} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", width: "50px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: "600", textAlign: "center" }}>{s}</label>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        placeholder="0" 
+                        value={sizeQuantities[s] || ""} 
+                        onChange={(e) => setSizeQuantities(prev => ({ ...prev, [s]: e.target.value }))}
+                        style={{ padding: "0.4rem", textAlign: "center" }}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>

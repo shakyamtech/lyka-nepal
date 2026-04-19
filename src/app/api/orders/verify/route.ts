@@ -28,15 +28,30 @@ export async function POST(request: Request) {
             // For simplicity and to avoid more SQL setup, we'll fetch then update
             const { data: product } = await supabaseAdmin
               .from('products')
-              .select('stock, sales_count')
+              .select('stock, sales_count, sizes')
               .eq('id', item.id)
               .single();
 
             if (product) {
+              let newSizes = product.sizes;
+              if (item.selectedSize && product.sizes && product.sizes.includes(':')) {
+                const sizesMap = product.sizes.split(',').map((s: string) => s.trim().split(':')); 
+                const updatedMap = sizesMap.map((parts: string[]) => {
+                  const name = parts[0];
+                  const qty = parts.length > 1 ? Number(parts[1]) : 1;
+                  if (name === item.selectedSize) {
+                    return `${name}:${Math.max(0, qty - 1)}`;
+                  }
+                  return parts.join(':');
+                });
+                newSizes = updatedMap.join(', ');
+              }
+
               const { error: updError } = await supabaseAdmin
                 .from('products')
                 .update({
                   stock: Math.max(0, product.stock - 1),
+                  sizes: newSizes,
                   sales_count: (product.sales_count || 0) + 1
                 })
                 .eq('id', item.id);
