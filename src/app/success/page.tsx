@@ -36,25 +36,43 @@ function ReceiptContent() {
     return () => clearInterval(interval);
   }, [isPending, liveStatus, orderId]);
 
-  const displayStatus = liveStatus || "Verified";
-  const displayPending = false;
+  let displayStatus = liveStatus;
+  if (!displayStatus) {
+    displayStatus = isPending ? "Pending Verification" : "Verified";
+  }
 
   return (
     <div className="container receipt-container" style={{ textAlign: "center", padding: "5rem 2rem", minHeight: "80vh" }}>
-      <h1 className="no-print" style={{ fontSize: "3rem", color: "#16a34a", marginBottom: "1rem" }}>
-        Payment Successful!
-      </h1>
+      {displayStatus === 'Rejected' ? (
+        <>
+          <h1 className="no-print" style={{ fontSize: "3rem", color: "#ef4444", marginBottom: "1rem" }}>
+            Payment Rejected
+          </h1>
+          <p style={{ fontSize: "1.2rem", marginBottom: "2rem", color: "#ef4444" }}>
+            Unfortunately, we could not verify your payment screenshot. Your order has not been completed. Please contact customer support.
+          </p>
+        </>
+      ) : (
+        <>
+          <h1 className="no-print" style={{ fontSize: "2.5rem", color: "#16a34a", marginBottom: "1rem" }}>
+            {displayStatus === 'Pending Verification' ? "Order Received!" : "Payment Successful!"}
+          </h1>
+          <p style={{ fontSize: "1.1rem", marginBottom: "2rem", color: "var(--text-muted)" }}>
+            {displayStatus === 'Pending Verification' 
+              ? "Your payment is currently being reviewed by our team. Please wait."
+              : "Thank you for trusting us! We will call you quickly to confirm shipping details."}
+          </p>
+        </>
+      )}
+
       <h1 className="only-print" style={{ display: "none", fontSize: "2rem", marginBottom: "1rem" }}>LYKA Nepal Receipt</h1>
-      <p style={{ fontSize: "1.2rem", marginBottom: "2rem", color: "var(--text-muted)" }}>
-        Thankyou for trusting us , we will call you back in a few minutes happy shopping!!
-      </p>
       
       <div className="receipt-box" style={{ background: "#f9fafb", border: "1px solid #e2e8f0", padding: "2rem", borderRadius: "8px", display: "inline-block", textAlign: "left", marginBottom: "3rem", minWidth: "350px" }}>
         <h3 style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "1rem", marginBottom: "1rem" }}>Order summary</h3>
         <p><strong>Order ID:</strong> {orderId || "TEST-ORDER-123"}</p>
         <p><strong>Date:</strong> {dateStr}</p>
-        <p><strong>Total Paid:</strong> NPR {total || "0"}</p>
-        <p><strong>Status:</strong> {displayStatus === 'Verified' ? "Paid & Verified" : displayStatus}</p>
+        <p><strong>Total:</strong> NPR {total || "0"}</p>
+        <p><strong>Status:</strong> <span style={{ color: displayStatus === 'Rejected' ? '#ef4444' : displayStatus === 'Verified' ? '#16a34a' : '#b45309', fontWeight: 'bold' }}>{displayStatus === 'Verified' ? "Paid & Verified" : displayStatus}</span></p>
         <br/>
         <p style={{ fontSize: "0.85rem", color: "#666", borderTop: "1px solid #e2e8f0", paddingTop: "1rem" }}>LYKA Nepal - Imadole, Lalitpur<br/>shop@lykanepal.com | +977 1234567890</p>
       </div>

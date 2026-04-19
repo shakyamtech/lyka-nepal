@@ -105,3 +105,23 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const { id, stock } = await request.json();
+    if (!id || stock === undefined) return NextResponse.json({ error: 'Missing id or stock' }, { status: 400 });
+
+    const { data, error } = await supabaseAdmin
+      .from('products')
+      .update({ stock: Number(stock) })
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error("Update product stock err:", error);
+    return NextResponse.json({ error: 'Failed to update stock' }, { status: 500 });
+  }
+}
+

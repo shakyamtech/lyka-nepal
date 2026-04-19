@@ -211,6 +211,29 @@ export default function AdminPage() {
     fetchProducts();
   };
 
+  const handleUpdateStock = async (id: number, currentStock: number) => {
+    const newStockStr = prompt(`Update stock for this item. Current stock: ${currentStock}`, currentStock.toString());
+    if (newStockStr === null) return; // User cancelled
+    
+    const newStock = parseInt(newStockStr);
+    if (isNaN(newStock) || newStock < 0) {
+      alert("Please enter a valid positive number.");
+      return;
+    }
+    
+    const res = await fetch(`/api/products`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, stock: newStock })
+    });
+    
+    if (res.ok) {
+      fetchProducts();
+    } else {
+      alert("Failed to update stock.");
+    }
+  };
+
   const handleDeleteSubUser = async (id: string) => {
     if (!confirm("Are you sure you want to remove this user?")) return;
     const res = await fetch(`/api/users?id=${id}`, { method: "DELETE" });
@@ -424,7 +447,10 @@ export default function AdminPage() {
                   <span>NPR {p.price} | {p.category} | Stock: {p.stock}</span>
                   {p.sizes && <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>Sizes: {p.sizes}</p>}
                 </div>
-                <button className="delete-btn" onClick={() => handleDelete(p.id)}>Delete</button>
+                <div>
+                  <button className="edit-btn" onClick={() => handleUpdateStock(p.id, p.stock)}>Refill Stock</button>
+                  <button className="delete-btn" onClick={() => handleDelete(p.id)}>Delete</button>
+                </div>
               </div>
             ))}
           </div>

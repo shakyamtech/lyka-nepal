@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
     const orderId = `ORD-${Date.now()}`;
 
-    // 2. Insert the order as 'Verified'
+    // 2. Insert the order as 'Pending Verification'
     const { error } = await supabaseAdmin
       .from('orders')
       .insert([{
@@ -90,31 +90,10 @@ export async function POST(request: Request) {
         items: items,
         total: Number(total),
         screenshot_url: screenshotUrl,
-        status: "Verified"
+        status: "Pending Verification"
       }]);
 
     if (error) throw error;
-
-    // 3. Deduct stock immediately
-    if (items && Array.isArray(items)) {
-      for (const item of items) {
-        const { data: product } = await supabaseAdmin
-          .from('products')
-          .select('stock, sales_count')
-          .eq('id', item.id)
-          .single();
-
-        if (product) {
-          await supabaseAdmin
-            .from('products')
-            .update({
-              stock: Math.max(0, product.stock - 1),
-              sales_count: (product.sales_count || 0) + 1
-            })
-            .eq('id', item.id);
-        }
-      }
-    }
 
     // Send a silent notification to Admin Panel
     await supabaseAdmin

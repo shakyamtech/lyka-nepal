@@ -170,103 +170,103 @@ export default function Home() {
 
   return (
     <>
-      <section 
-        className="hero" 
-        style={heroBg ? { 
+      {/* Hero */}
+      <section
+        className="hero"
+        style={heroBg ? {
           backgroundImage: `url(${heroBg})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundAttachment: 'fixed' // Parallax Effect
-        } : {}}
+        } : { background: '#1a1a1a' }}
       >
         <div className="hero-overlay">
           <div className="container">
             <h1>New Arrivals</h1>
-            <p>Discover the finest women's fashion in Imadole.</p>
+            <a href="#catalog" className="hero-cta">Shop now</a>
           </div>
         </div>
       </section>
 
+      {/* Catalog */}
       <section className="catalog container" id="catalog">
-        <div className="catalog-header">
+        <div className="section-header">
           <h2>Our Collection</h2>
-          <p>Clothes, Bags & Accessories, and Shoes carefully curated for you.</p>
+          <span style={{ fontSize: '0.82rem', color: '#999', fontStyle: 'italic' }}>Clothes · Bags &amp; Accessories · Shoes</span>
         </div>
 
-        {/* Filters and Search */}
         <div className="catalog-filters">
           <div className="filter-group">
             {["All", "Clothes", "Bags & Accessories", "Shoes"].map(cat => (
-              <button 
-                key={cat} 
-                onClick={() => setCategoryFilter(cat === "Bags & Accessories" ? "Bags" : cat)} 
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat === "Bags & Accessories" ? "Bags" : cat)}
                 className={`filter-btn ${categoryFilter === (cat === "Bags & Accessories" ? "Bags" : cat) ? "active" : ""}`}
               >
                 {cat}
               </button>
             ))}
           </div>
-          <input 
-            type="search" 
-            placeholder="Search products..." 
-            value={searchTerm} 
-            onChange={e => setSearchTerm(e.target.value)} 
+          <input
+            type="search"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className="search-input"
           />
         </div>
 
         <div className="product-grid">
-          {filteredProducts.length === 0 && <p style={{ gridColumn: "1 / -1", textAlign: "center", fontStyle: "italic", color: "var(--text-muted)" }}>No products found matching your search.</p>}
+          {filteredProducts.length === 0 && (
+            <p style={{ gridColumn: "1 / -1", textAlign: "center", color: "#999", padding: "4rem 0", fontStyle: "italic" }}>
+              No products found.
+            </p>
+          )}
           {filteredProducts.map((product) => (
             <div key={product.id} className="product-card">
-              <div className="product-image" style={{ position: 'relative', overflow: 'hidden' }}>
-                <Image 
-                  src={product.image} 
-                  alt={product.name} 
-                  fill 
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              <div className="product-image" style={{ position: 'relative' }}>
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                   style={{ objectFit: 'cover' }}
                   priority={false}
                 />
+                {product.stock === 0 && (
+                  <div style={{
+                    position: 'absolute', top: '0.75rem', left: '0.75rem',
+                    background: '#fff', color: '#111', fontSize: '0.68rem',
+                    fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase',
+                    padding: '0.3rem 0.7rem'
+                  }}>Sold Out</div>
+                )}
+                {product.stock > 0 && (
+                  <div className="hover-order-overlay" onClick={() => addToCart(product)}>
+                    ORDER NOW
+                  </div>
+                )}
               </div>
+
               <div className="product-info">
                 <div>
-                  <span className="category">{product.category}</span>
                   <h3>{product.name}</h3>
-                  <p className="price">NPR {product.price}</p>
+                  <p className="price">Rs.{product.price.toLocaleString()}</p>
                   {product.description && (
-                    <p style={{ 
-                      fontSize: "0.9rem", 
-                      color: "#4b5563", 
-                      marginTop: "0.75rem", 
-                      lineHeight: "1.5", 
-                      borderTop: "1px solid #f3f4f6", 
-                      paddingTop: "0.75rem" 
-                    }}>
-                      {product.description}
-                    </p>
+                    <p className="product-description">{product.description}</p>
                   )}
                 </div>
 
-                {/* Size Selection for Clothes/Shoes */}
                 {['Clothes', 'Shoes'].includes(product.category) && product.sizes && (
-                  <div style={{ margin: "1rem 0" }}>
-                    <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Select Size:</p>
-                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <div className="size-selector">
+                    <div className="size-buttons">
                       {product.sizes.split(',').map((s: string) => (
                         <button
                           key={s}
-                          onClick={() => setSelectedSizes(prev => ({ ...prev, [product.id]: s.trim() }))}
-                          style={{
-                            padding: "0.4rem 0.8rem",
-                            border: `1px solid ${selectedSizes[product.id] === s.trim() ? "var(--primary)" : "#e5e7eb"}`,
-                            background: selectedSizes[product.id] === s.trim() ? "var(--primary)" : "white",
-                            color: selectedSizes[product.id] === s.trim() ? "white" : "var(--foreground)",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            fontSize: "0.8rem",
-                            transition: "all 0.2s"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSizes(prev => ({ ...prev, [product.id]: s.trim() }));
                           }}
+                          className={`size-btn ${selectedSizes[product.id] === s.trim() ? 'selected' : ''}`}
                         >
                           {s.trim()}
                         </button>
@@ -274,93 +274,85 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-
-                {product.stock > 0 ? (
-                  <button className="add-btn" onClick={() => addToCart(product)}>Add to Bag</button>
-                ) : (
-                  <button className="add-btn" style={{ background: "#f3f4f6", color: "#9ca3af", cursor: "not-allowed" }} disabled>Coming Back Soon</button>
-                )}
               </div>
             </div>
           ))}
         </div>
       </section>
 
+      {/* Cart / Billing */}
       <section className="billing-section container" id="cart">
         <div className="billing-container">
-          <h2>Make A Bill</h2>
+          <h2>Your Bag</h2>
           {cart.length === 0 ? (
-            <p className="empty-cart">Your bag is empty. Add items to make a bill.</p>
+            <p style={{ textAlign: 'center', color: '#999', padding: '2rem 0', fontSize: '0.9rem' }}>
+              Your bag is empty. Browse our collection above.
+            </p>
           ) : (
-            <div className="bill-details">
+            <div>
               <ul className="cart-list">
                 {cart.map((item, index) => (
-                  <li key={index} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <strong>{item.name} {item.selectedSize && <span style={{ color: "var(--primary)", fontSize: "0.8rem" }}>(Size: {item.selectedSize})</span>}</strong>
-                      <span style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>NPR {item.price}</span>
+                  <li key={index}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <strong style={{ fontSize: '0.92rem' }}>
+                        {item.name}
+                        {item.selectedSize && (
+                          <span style={{ color: '#888', fontWeight: '400', marginLeft: '0.5rem', fontSize: '0.82rem' }}>/ {item.selectedSize}</span>
+                        )}
+                      </strong>
+                      <span style={{ fontSize: '0.85rem', color: '#888', marginTop: '0.2rem' }}>NPR {item.price.toLocaleString()}</span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => removeFromCart(index)}
-                      style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.2rem", padding: "0.5rem" }}
+                      style={{ background: 'none', border: 'none', color: '#bbb', cursor: 'pointer', fontSize: '1.1rem', padding: '0.4rem', transition: 'color 0.2s' }}
+                      onMouseOver={e => (e.currentTarget.style.color = '#111')}
+                      onMouseOut={e => (e.currentTarget.style.color = '#bbb')}
                       title="Remove item"
-                    >
-                      ✕
-                    </button>
+                    >✕</button>
                   </li>
                 ))}
               </ul>
+
               <div className="bill-total">
-                <span>Total Amount:</span>
-                <span>NPR {totalBill}</span>
+                <span>Total</span>
+                <span>NPR {totalBill.toLocaleString()}</span>
               </div>
+
               {!showQR ? (
                 <form className="checkout-form" onSubmit={handleCheckout}>
                   <input type="text" placeholder="Full Name" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
                   <input type="email" placeholder="Email Address" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} required />
                   <input type="tel" placeholder="Phone Number" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required />
                   <textarea placeholder="Delivery Address (e.g., Imadole Area)" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} required></textarea>
-                  <button type="submit" className="checkout-btn">
-                    Proceed to Payment
-                  </button>
+                  <button type="submit" className="checkout-btn">Proceed to Payment</button>
                 </form>
               ) : (
-                <form className="checkout-form complete-payment" onSubmit={handleFinalSubmit} style={{ marginTop: '2rem', padding: '1rem', border: '1px dashed var(--primary)', borderRadius: '8px', background: '#fafafa' }}>
-                  <h3 style={{ marginBottom: "1rem", color: "var(--foreground)" }}>Step 2: Pay & Verify</h3>
-                  <div style={{ padding: "0", background: "white", margin: "0 auto 1.5rem", width: "fit-content", borderRadius: "12px", border: "1px solid var(--border)", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", overflow: "hidden", position: 'relative', minHeight: '250px', minWidth: '250px' }}>
-                    {/* Dynamic QR Graphic */}
-                    <div style={{ position: 'relative', width: '250px', height: '250px' }}>
-                        <Image 
-                          src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/site-assets/qr.png?v=${Date.now()}`} 
-                          alt="Store QR Code" 
-                          fill
-                          style={{ objectFit: 'cover' }}
-                          unoptimized={true} // For dynamic storage images
-                          onError={(e) => {
-                             // Fallback to text if QR isn't uploaded yet
-                             const target = e.target as HTMLElement;
-                             target.style.display = 'none';
-                             target.parentElement!.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280; font-size: 0.9rem;"><strong>NPR ' + totalBill + '</strong><br/><br/>(Please ask Admin to<br/>upload QR code in Dashboard)</div>';
-                          }}
-                       />
+                <form className="checkout-form" onSubmit={handleFinalSubmit} style={{ marginTop: '2rem' }}>
+                  <div style={{ border: '1px solid var(--border)', padding: '1.5rem', background: '#fafafa', marginBottom: '1rem' }}>
+                    <p style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', color: '#666' }}>
+                      Step 2 — Scan &amp; Pay NPR {totalBill.toLocaleString()}
+                    </p>
+                    <div style={{ margin: '0 auto', width: '220px', height: '220px', position: 'relative' }}>
+                      <Image
+                        src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/site-assets/qr.png?v=${Date.now()}`}
+                        alt="Payment QR Code"
+                        fill
+                        style={{ objectFit: 'contain' }}
+                        unoptimized={true}
+                        onError={(e) => {
+                          const target = e.target as HTMLElement;
+                          target.style.display = 'none';
+                          target.parentElement!.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:0.85rem;text-align:center;">QR not uploaded yet.<br/>Check Admin Dashboard.</div>';
+                        }}
+                      />
                     </div>
                   </div>
-                  
-                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: "bold" }}>
-                    After paying, upload a screenshot of your transaction:
+                  <label style={{ fontSize: '0.78rem', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#666', marginBottom: '0.4rem', display: 'block' }}>
+                    Upload Payment Screenshot:
                   </label>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={e => setPaymentScreenshot(e.target.files?.[0] || null)} 
-                    required 
-                    style={{ marginBottom: "1.5rem" }} 
-                  />
-                  
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button type="button" onClick={() => setShowQR(false)} style={{ flex: 1, padding: "0.8rem", background: "white", border: "1px solid var(--border)", borderRadius: "4px", cursor: "pointer" }}>
-                      ← Back
-                    </button>
+                  <input type="file" accept="image/*" onChange={e => setPaymentScreenshot(e.target.files?.[0] || null)} required style={{ marginBottom: '1rem' }} />
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button type="button" onClick={() => setShowQR(false)} style={{ flex: 1, padding: '0.9rem', background: 'white', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif' }}>← Back</button>
                     <button type="submit" className="checkout-btn" disabled={isProcessing} style={{ flex: 2, margin: 0 }}>
                       {isProcessing ? "Uploading..." : "Submit Payment"}
                     </button>
@@ -374,3 +366,4 @@ export default function Home() {
     </>
   );
 }
+

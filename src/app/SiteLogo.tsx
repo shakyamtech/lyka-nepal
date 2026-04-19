@@ -24,12 +24,12 @@ export default function SiteLogo() {
   return (
     <Link href="/" className="logo" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
       {!imageError ? (
-        <div style={{ position: 'relative', height: '40px', width: '120px' }}>
+        <div style={{ position: 'relative', height: '40px', width: '120px', border: '1px solid #000', padding: '0.2rem' }}>
           <Image 
             src={logoUrl || "/logo.png"} 
             alt="LYKA Nepal" 
             fill
-            style={{ objectFit: 'contain', objectPosition: 'left' }}
+            style={{ objectFit: 'contain', objectPosition: 'center' }}
             unoptimized={true} 
             onError={() => {
               if (logoUrl && !logoUrl.includes("/logo.png")) {
@@ -41,9 +41,21 @@ export default function SiteLogo() {
           />
         </div>
       ) : (
-        <span style={{ fontSize: "1.8rem", fontWeight: "800", letterSpacing: "0.1em" }}>
-            LYKA <span style={{ color: "var(--primary)", fontWeight: "300" }}>Nepal</span>
-        </span>
+        <div style={{ 
+          background: "transparent", 
+          color: "#000", 
+          border: "1px solid #000",
+          padding: "0.3rem 0.6rem", 
+          fontWeight: "400", 
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center"
+        }}>
+          <span className="desktop-logo-text" style={{ fontSize: "1.2rem", whiteSpace: "nowrap" }}>LYKA NEPAL</span>
+          <span className="mobile-logo-text" style={{ fontSize: "0.9rem", whiteSpace: "nowrap" }}>LYKA NEPAL</span>
+        </div>
       )}
     </Link>
   );
