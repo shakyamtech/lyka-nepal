@@ -16,6 +16,12 @@ export default function AccountDashboard() {
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
 
+  // Edit Expense State
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editExpCategory, setEditExpCategory] = useState("");
+  const [editExpDesc, setEditExpDesc] = useState("");
+  const [editExpAmount, setEditExpAmount] = useState("");
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -54,6 +60,36 @@ export default function AccountDashboard() {
     } catch (err) {
       console.error(err);
       alert("Error adding expense");
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this expense?")) return;
+    try {
+      const res = await fetch(`/api/expenses?id=${id}`, { method: "DELETE" });
+      if (res.ok) fetchData();
+      else alert("Failed to delete expense");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateExpense = async (e: React.FormEvent, id: string) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/expenses", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, category: editExpCategory, description: editExpDesc, amount: Number(editExpAmount) })
+      });
+      if (res.ok) {
+        setEditingExpenseId(null);
+        fetchData();
+      } else {
+        alert("Failed to update expense");
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -152,12 +188,34 @@ export default function AccountDashboard() {
             <h3>All Expenses Ledger</h3>
             <div style={{ marginTop: "1rem" }}>
               {expenses.length === 0 ? <p>No expenses recorded yet.</p> : expenses.map(e => (
-                <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "1rem", borderBottom: "1px solid #eee" }}>
-                  <div>
-                    <strong>{e.category}</strong>
-                    <div style={{ fontSize: "0.8rem", color: "gray" }}>{e.description} • {new Date(e.date).toLocaleDateString()}</div>
-                  </div>
-                  <div style={{ color: "red", fontWeight: "bold" }}>- Rs.{Number(e.amount).toLocaleString()}</div>
+                <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", borderBottom: "1px solid #eee", background: editingExpenseId === e.id ? "#f9fafb" : "transparent" }}>
+                  {editingExpenseId === e.id ? (
+                    <form onSubmit={(ev) => handleUpdateExpense(ev, e.id)} style={{ display: "flex", gap: "0.5rem", width: "100%", alignItems: "center", flexWrap: "wrap" }}>
+                      <select value={editExpCategory} onChange={ev => setEditExpCategory(ev.target.value)} required style={{ padding: "0.5rem" }}>
+                        <option value="Marketing">Marketing / Ads</option>
+                        <option value="Delivery">Delivery / Riders</option>
+                        <option value="Salary">Staff Salary</option>
+                        <option value="Rent">Rent & Utilities</option>
+                        <option value="Misc">Miscellaneous</option>
+                      </select>
+                      <input type="text" value={editExpDesc} onChange={ev => setEditExpDesc(ev.target.value)} required style={{ padding: "0.5rem", flex: 1, minWidth: "150px" }} />
+                      <input type="number" value={editExpAmount} onChange={ev => setEditExpAmount(ev.target.value)} required style={{ padding: "0.5rem", width: "100px" }} />
+                      <button type="submit" style={{ background: "green", color: "white", padding: "0.5rem 1rem", border: "none", cursor: "pointer", fontWeight: "bold" }}>Save</button>
+                      <button type="button" onClick={() => setEditingExpenseId(null)} style={{ background: "#ccc", color: "black", padding: "0.5rem 1rem", border: "none", cursor: "pointer", fontWeight: "bold" }}>Cancel</button>
+                    </form>
+                  ) : (
+                    <>
+                      <div>
+                        <strong>{e.category}</strong>
+                        <div style={{ fontSize: "0.8rem", color: "gray" }}>{e.description} • {new Date(e.date).toLocaleDateString()}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                        <div style={{ color: "red", fontWeight: "bold", marginRight: "1rem" }}>- Rs.{Number(e.amount).toLocaleString()}</div>
+                        <button onClick={() => { setEditingExpenseId(e.id); setEditExpCategory(e.category); setEditExpDesc(e.description); setEditExpAmount(e.amount); }} style={{ background: "transparent", border: "none", color: "#2563eb", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Edit</button>
+                        <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Delete</button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
