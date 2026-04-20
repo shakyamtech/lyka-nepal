@@ -344,7 +344,30 @@ export default function Home() {
             )}
             {filteredProducts.map((product) => <ProductCard key={`grid-${product.id}`} product={product} />)}
           </div>
+          </div>
         </div>
+
+        {/* Promotional Sale Banners */}
+        <div className="promo-section">
+          {/* Left Promo: Season Sale */}
+          <div className="promo-banner" style={{ backgroundImage: "url('/promo-season-sale.png')" }}>
+            <span className="promo-side-text left">30%</span>
+            <div className="promo-content">
+              <h3>SALE</h3>
+              <p>#END OF SEASON</p>
+              <a href="/#Clothes" className="promo-btn">VIEW</a>
+            </div>
+          </div>
+
+          {/* Right Promo: 50% Off */}
+          <div className="promo-banner" style={{ backgroundImage: "url('/promo-half-price.png')" }}>
+            <span className="promo-side-text right">50%</span>
+            <div className="promo-content" style={{ padding: "1.5rem" }}>
+              <a href="/#Shoes" className="promo-btn">VIEW</a>
+            </div>
+          </div>
+        </div>
+
       </section>
 
       {/* Cart / Billing */}
