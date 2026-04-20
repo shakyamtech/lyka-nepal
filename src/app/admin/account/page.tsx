@@ -12,12 +12,14 @@ export default function AccountDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Expense Form State
+  const [expType, setExpType] = useState("EXPENSE");
   const [expCategory, setExpCategory] = useState("Marketing");
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
 
   // Edit Expense State
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editExpType, setEditExpType] = useState("EXPENSE");
   const [editExpCategory, setEditExpCategory] = useState("");
   const [editExpDesc, setEditExpDesc] = useState("");
   const [editExpAmount, setEditExpAmount] = useState("");
@@ -50,7 +52,7 @@ export default function AccountDashboard() {
       const res = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: expCategory, description: expDesc, amount: Number(expAmount) })
+        body: JSON.stringify({ type: expType, category: expCategory, description: expDesc, amount: Number(expAmount) })
       });
       if (res.ok) {
         setExpDesc(""); setExpAmount("");
@@ -80,7 +82,7 @@ export default function AccountDashboard() {
       const res = await fetch("/api/expenses", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, category: editExpCategory, description: editExpDesc, amount: Number(editExpAmount) })
+        body: JSON.stringify({ id, type: editExpType, category: editExpCategory, description: editExpDesc, amount: Number(editExpAmount) })
       });
       if (res.ok) {
         setEditingExpenseId(null);
@@ -119,14 +121,18 @@ export default function AccountDashboard() {
   const today = new Date().toISOString().split("T")[0];
   const todaysOrders = orders.filter(o => o.date?.startsWith(today));
   const todaysSales = todaysOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-  const todaysExpenses = expenses.filter(e => e.date?.startsWith(today)).reduce((sum, e) => sum + Number(e.amount), 0);
+  const todaysIncomeEntries = expenses.filter(e => e.date?.startsWith(today) && e.type === "INCOME").reduce((sum, e) => sum + Number(e.amount), 0);
+  const todaysExpensesAmount = expenses.filter(e => e.date?.startsWith(today) && e.type !== "INCOME").reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalDailyInflow = todaysSales + todaysIncomeEntries;
 
-  // P&L Math (All Time for simplicity here, but can be filtered)
-  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  // P&L Math
+  const totalSalesRevenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
   const totalCOGS = orders.reduce((sum, o) => sum + calculateCOGS(o), 0);
-  const grossProfit = totalRevenue - totalCOGS;
-  const totalOpEx = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const netProfit = grossProfit - totalOpEx;
+  const grossProfit = totalSalesRevenue - totalCOGS;
+
+  const totalOtherIncome = expenses.filter(e => e.type === "INCOME").reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalOpEx = expenses.filter(e => e.type !== "INCOME").reduce((sum, e) => sum + Number(e.amount), 0);
+  const netProfit = grossProfit + totalOtherIncome - totalOpEx;
 
   // Stock Summary Math
   const inventoryCostValue = products.reduce((sum, p) => sum + (Number(p.stock) * Number(p.cost || 0)), 0);
@@ -162,41 +168,71 @@ export default function AccountDashboard() {
       {activeTab === "DAYBOOK" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "3rem" }}>
           <div>
-            <h3>Add New Expense</h3>
-            <form onSubmit={handleAddExpense} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem", background: "#f9f9f9", padding: "1.5rem", border: "1px solid #e0e0e0" }}>
+            <h3>Add Ledger Entry</h3>
+            <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+              <button type="button" onClick={() => { setExpType("INCOME"); setExpCategory("Offline Sale"); }} style={{ flex: 1, padding: "0.8rem", background: expType === "INCOME" ? "green" : "#eee", color: expType === "INCOME" ? "white" : "black", border: "1px solid #ccc", cursor: "pointer", fontWeight: "bold" }}>+ Income</button>
+              <button type="button" onClick={() => { setExpType("EXPENSE"); setExpCategory("Marketing"); }} style={{ flex: 1, padding: "0.8rem", background: expType === "EXPENSE" ? "red" : "#eee", color: expType === "EXPENSE" ? "white" : "black", border: "1px solid #ccc", cursor: "pointer", fontWeight: "bold" }}>- Expense</button>
+            </div>
+            <form onSubmit={handleAddExpense} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "0.5rem", background: "#f9f9f9", padding: "1.5rem", border: "1px solid #e0e0e0" }}>
               <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} required style={{ padding: "0.8rem" }}>
-                <option value="Marketing">Marketing / Ads</option>
-                <option value="Delivery">Delivery / Riders</option>
-                <option value="Salary">Staff Salary</option>
-                <option value="Rent">Rent & Utilities</option>
-                <option value="Misc">Miscellaneous</option>
+                {expType === "EXPENSE" ? (
+                  <>
+                    <option value="Marketing">Marketing / Ads</option>
+                    <option value="Delivery">Delivery / Riders</option>
+                    <option value="Salary">Staff Salary</option>
+                    <option value="Rent">Rent & Utilities</option>
+                    <option value="Misc">Miscellaneous Expense</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="Offline Sale">Offline / Physical Sale</option>
+                    <option value="Loan / Capital">Outside Loan / Capital</option>
+                    <option value="Refund Received">Refund Received</option>
+                    <option value="Misc Income">Miscellaneous Income</option>
+                  </>
+                )}
               </select>
-              <input type="text" placeholder="Description (e.g., Facebook Boost)" value={expDesc} onChange={e => setExpDesc(e.target.value)} required style={{ padding: "0.8rem" }} />
+              <input type="text" placeholder="Description (e.g., Cash from walk-in customer)" value={expDesc} onChange={e => setExpDesc(e.target.value)} required style={{ padding: "0.8rem" }} />
               <input type="number" placeholder="Amount (NPR)" value={expAmount} onChange={e => setExpAmount(e.target.value)} required style={{ padding: "0.8rem" }} />
-              <button type="submit" style={{ background: "black", color: "white", padding: "1rem", fontWeight: "bold", cursor: "pointer", border: "none" }}>ENTER EXPENSE</button>
+              <button type="submit" style={{ background: "black", color: "white", padding: "1rem", fontWeight: "bold", cursor: "pointer", border: "none" }}>SAVE ENTRY</button>
             </form>
 
             <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid #ccc", background: "white" }}>
               <h4>Today's Summary</h4>
-              <p>Cash Inflow: <strong style={{ color: "green" }}>Rs.{todaysSales.toLocaleString()}</strong></p>
-              <p>Cash Outflow: <strong style={{ color: "red" }}>Rs.{todaysExpenses.toLocaleString()}</strong></p>
+              <p>Cash Inflow: <strong style={{ color: "green" }}>Rs.{totalDailyInflow.toLocaleString()}</strong></p>
+              <p>Cash Outflow: <strong style={{ color: "red" }}>Rs.{todaysExpensesAmount.toLocaleString()}</strong></p>
               <hr style={{ margin: "1rem 0" }}/>
-              <p>Net Daily Position: <strong>Rs.{(todaysSales - todaysExpenses).toLocaleString()}</strong></p>
+              <p>Net Daily Position: <strong>Rs.{(totalDailyInflow - todaysExpensesAmount).toLocaleString()}</strong></p>
             </div>
           </div>
           <div>
-            <h3>All Expenses Ledger</h3>
+            <h3>Full Cash Ledger</h3>
             <div style={{ marginTop: "1rem" }}>
               {expenses.length === 0 ? <p>No expenses recorded yet.</p> : expenses.map(e => (
                 <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", borderBottom: "1px solid #eee", background: editingExpenseId === e.id ? "#f9fafb" : "transparent" }}>
                   {editingExpenseId === e.id ? (
                     <form onSubmit={(ev) => handleUpdateExpense(ev, e.id)} style={{ display: "flex", gap: "0.5rem", width: "100%", alignItems: "center", flexWrap: "wrap" }}>
+                      <select value={editExpType} onChange={ev => { setEditExpType(ev.target.value); setEditExpCategory(ev.target.value === "INCOME" ? "Offline Sale" : "Marketing"); }} required style={{ padding: "0.5rem" }}>
+                        <option value="EXPENSE">Expense</option>
+                        <option value="INCOME">Income</option>
+                      </select>
                       <select value={editExpCategory} onChange={ev => setEditExpCategory(ev.target.value)} required style={{ padding: "0.5rem" }}>
-                        <option value="Marketing">Marketing / Ads</option>
-                        <option value="Delivery">Delivery / Riders</option>
-                        <option value="Salary">Staff Salary</option>
-                        <option value="Rent">Rent & Utilities</option>
-                        <option value="Misc">Miscellaneous</option>
+                        {editExpType === "EXPENSE" ? (
+                          <>
+                            <option value="Marketing">Marketing / Ads</option>
+                            <option value="Delivery">Delivery / Riders</option>
+                            <option value="Salary">Staff Salary</option>
+                            <option value="Rent">Rent & Utilities</option>
+                            <option value="Misc">Miscellaneous Expense</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="Offline Sale">Offline / Physical Sale</option>
+                            <option value="Loan / Capital">Outside Loan / Capital</option>
+                            <option value="Refund Received">Refund Received</option>
+                            <option value="Misc Income">Miscellaneous Income</option>
+                          </>
+                        )}
                       </select>
                       <input type="text" value={editExpDesc} onChange={ev => setEditExpDesc(ev.target.value)} required style={{ padding: "0.5rem", flex: 1, minWidth: "150px" }} />
                       <input type="number" value={editExpAmount} onChange={ev => setEditExpAmount(ev.target.value)} required style={{ padding: "0.5rem", width: "100px" }} />
@@ -206,12 +242,14 @@ export default function AccountDashboard() {
                   ) : (
                     <>
                       <div>
-                        <strong>{e.category}</strong>
+                        <strong>{e.type === "INCOME" ? "➕ " : ""}{e.category}</strong>
                         <div style={{ fontSize: "0.8rem", color: "gray" }}>{e.description} • {new Date(e.date).toLocaleDateString()}</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                        <div style={{ color: "red", fontWeight: "bold", marginRight: "1rem" }}>- Rs.{Number(e.amount).toLocaleString()}</div>
-                        <button onClick={() => { setEditingExpenseId(e.id); setEditExpCategory(e.category); setEditExpDesc(e.description); setEditExpAmount(e.amount); }} style={{ background: "transparent", border: "none", color: "#2563eb", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Edit</button>
+                        <div style={{ color: e.type === "INCOME" ? "green" : "red", fontWeight: "bold", marginRight: "1rem" }}>
+                          {e.type === "INCOME" ? "+" : "-"} Rs.{Number(e.amount).toLocaleString()}
+                        </div>
+                        <button onClick={() => { setEditingExpenseId(e.id); setEditExpType(e.type || "EXPENSE"); setEditExpCategory(e.category); setEditExpDesc(e.description); setEditExpAmount(e.amount); }} style={{ background: "transparent", border: "none", color: "#2563eb", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Edit</button>
                         <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Delete</button>
                       </div>
                     </>
@@ -229,20 +267,25 @@ export default function AccountDashboard() {
           <hr style={{ margin: "2rem 0" }} />
           
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", marginBottom: "0.5rem" }}>
-            <span>Gross Sales Revenue:</span>
-            <span>Rs. {totalRevenue.toLocaleString()}</span>
+            <span>Gross Web Sales Revenue:</span>
+            <span>Rs. {totalSalesRevenue.toLocaleString()}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "red", borderBottom: "1px solid #000", paddingBottom: "1rem", marginBottom: "1rem" }}>
             <span>(-) Cost of Goods Sold (COGS):</span>
             <span>- Rs. {totalCOGS.toLocaleString()}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.5rem", fontWeight: "bold", marginBottom: "3rem" }}>
-            <span>Gross Profit:</span>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.4rem", fontWeight: "bold", marginBottom: "1rem" }}>
+            <span>Merchandise Gross Profit:</span>
             <span>Rs. {grossProfit.toLocaleString()}</span>
           </div>
 
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "green", marginBottom: "0.5rem" }}>
+            <span>(+) Total Other Income (Manual):</span>
+            <span>+ Rs. {totalOtherIncome.toLocaleString()}</span>
+          </div>
+
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "red", borderBottom: "1px solid #000", paddingBottom: "1rem", marginBottom: "1rem" }}>
-            <span>(-) Total Operating Expenses:</span>
+            <span>(-) Total Manual Expenses:</span>
             <span>- Rs. {totalOpEx.toLocaleString()}</span>
           </div>
           
@@ -258,8 +301,8 @@ export default function AccountDashboard() {
           <div style={{ border: "2px solid black", padding: "2rem" }}>
             <h2 style={{ borderBottom: "1px solid #ccc", paddingBottom: "1rem" }}>Assets</h2>
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between" }}>
-              <span>Total Liquid Cash Generated</span>
-              <strong>Rs. {totalRevenue.toLocaleString()}</strong>
+              <span>Total Cash & Revenue Generated</span>
+              <strong>Rs. {(totalSalesRevenue + totalOtherIncome).toLocaleString()}</strong>
             </div>
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between" }}>
               <span>Current Inventory Cost Value</span>
@@ -268,7 +311,7 @@ export default function AccountDashboard() {
             <hr style={{ margin: "2rem 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.4rem", fontWeight: "bold" }}>
               <span>Total Assets</span>
-              <span>Rs. {(totalRevenue + inventoryCostValue).toLocaleString()}</span>
+              <span>Rs. {(totalSalesRevenue + totalOtherIncome + inventoryCostValue).toLocaleString()}</span>
             </div>
           </div>
           <div style={{ border: "2px solid #ccc", padding: "2rem", background: "#fafafa" }}>
@@ -276,7 +319,7 @@ export default function AccountDashboard() {
             <p style={{ marginTop: "1rem", color: "gray" }}>No external liabilities recorded in e-commerce system.</p>
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
               <span>Owner's Equity (Net Worth)</span>
-              <span>Rs. {(totalRevenue + inventoryCostValue).toLocaleString()}</span>
+              <span>Rs. {(totalSalesRevenue + totalOtherIncome + inventoryCostValue).toLocaleString()}</span>
             </div>
           </div>
         </div>
