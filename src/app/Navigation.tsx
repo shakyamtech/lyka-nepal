@@ -61,9 +61,9 @@ export default function Navigation() {
 
           {/* Desktop Nav */}
           <nav className="main-nav desktop-only">
-            <Link href="/#Clothes">Clothes</Link>
-            <Link href="/#Bags">Bags & Accessories</Link>
-            <Link href="/#Shoes">Shoes</Link>
+            <Link href="/#Clothes" onClick={() => setTimeout(() => window.dispatchEvent(new Event('hashchange')), 50)}>Clothes</Link>
+            <Link href="/#Bags" onClick={() => setTimeout(() => window.dispatchEvent(new Event('hashchange')), 50)}>Bags & Accessories</Link>
+            <Link href="/#Shoes" onClick={() => setTimeout(() => window.dispatchEvent(new Event('hashchange')), 50)}>Shoes</Link>
           </nav>
 
           <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', width: "200px", justifyContent: "flex-end" }}>
@@ -111,9 +111,9 @@ export default function Navigation() {
           <button className="close-menu" onClick={closeMenu}>&times;</button>
         </div>
         <nav className="side-nav">
-          <Link href="/#Clothes" onClick={closeMenu}>Clothes</Link>
-          <Link href="/#Bags" onClick={closeMenu}>Bags & Accessories</Link>
-          <Link href="/#Shoes" onClick={closeMenu}>Shoes</Link>
+          <Link href="/#Clothes" onClick={() => { closeMenu(); setTimeout(() => window.dispatchEvent(new Event('hashchange')), 50); }}>Clothes</Link>
+          <Link href="/#Bags" onClick={() => { closeMenu(); setTimeout(() => window.dispatchEvent(new Event('hashchange')), 50); }}>Bags & Accessories</Link>
+          <Link href="/#Shoes" onClick={() => { closeMenu(); setTimeout(() => window.dispatchEvent(new Event('hashchange')), 50); }}>Shoes</Link>
           <div className="side-nav-footer">
             <Link href="/#cart" className="cart-link" onClick={closeMenu}>🛍 Bag ({cartCount})</Link>
           </div>
