@@ -24,6 +24,13 @@ export default function AccountDashboard() {
   const [editExpDesc, setEditExpDesc] = useState("");
   const [editExpAmount, setEditExpAmount] = useState("");
 
+  // Returns Form State
+  const [retProductId, setRetProductId] = useState("");
+  const [retQty, setRetQty] = useState("1");
+  const [retAmount, setRetAmount] = useState("");
+  const [retNote, setRetNote] = useState("");
+  const [retLoading, setRetLoading] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -43,6 +50,45 @@ export default function AccountDashboard() {
       console.error(err);
     }
     setLoading(false);
+  };
+
+  const handleReturn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!retProductId || !retAmount) return;
+    setRetLoading(true);
+    try {
+      const product = products.find((p: any) => p.id.toString() === retProductId);
+      if (!product) { alert("Product not found"); setRetLoading(false); return; }
+      const newStock = Number(product.stock) + Number(retQty);
+
+      // 1. Restock the product
+      const stockRes = await fetch("/api/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: retProductId, stock: newStock })
+      });
+      if (!stockRes.ok) throw new Error("Failed to restock product");
+
+      // 2. Log refund income in ledger
+      const ledgerRes = await fetch("/api/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "INCOME",
+          category: "Refund Received",
+          description: `Return: ${product.name} x${retQty}${retNote ? ` — ${retNote}` : ""}`,
+          amount: Number(retAmount)
+        })
+      });
+      if (!ledgerRes.ok) throw new Error("Failed to log refund");
+
+      alert(`✅ Done! ${product.name} restocked (+${retQty} units) and Rs. ${retAmount} logged as Refund Income.`);
+      setRetProductId(""); setRetQty("1"); setRetAmount(""); setRetNote("");
+      fetchData();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    }
+    setRetLoading(false);
   };
 
   const handleAddExpense = async (e: React.FormEvent) => {
@@ -147,20 +193,20 @@ export default function AccountDashboard() {
       </header>
 
       <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "1px solid #ccc", paddingBottom: "1rem" }}>
-        {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK"].map(tab => (
+        {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].map(tab => (
           <button 
             key={tab} 
             onClick={() => setActiveTab(tab)}
             style={{ 
               padding: "0.8rem 1.5rem", 
-              background: activeTab === tab ? "black" : "transparent",
-              color: activeTab === tab ? "white" : "black",
-              border: "1px solid black",
+              background: activeTab === tab ? (tab === "RETURNS" ? "#dc2626" : "black") : "transparent",
+              color: activeTab === tab ? "white" : (tab === "RETURNS" ? "#dc2626" : "black"),
+              border: `1px solid ${tab === "RETURNS" ? "#dc2626" : "black"}`,
               fontWeight: "bold",
               cursor: "pointer"
             }}
           >
-            {tab.replace("_", " ")}
+            {tab === "RETURNS" ? "↩ RETURNS" : tab.replace("_", " ")}
           </button>
         ))}
       </div>
@@ -410,6 +456,91 @@ export default function AccountDashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {activeTab === "RETURNS" && (
+        <div style={{ maxWidth: "600px" }}>
+          <div style={{ background: "#fff5f5", border: "2px solid #dc2626", padding: "2rem", borderRadius: "4px", marginBottom: "2rem" }}>
+            <h2 style={{ color: "#dc2626", borderBottom: "1px solid #fca5a5", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>↩ Customer Return / Refund</h2>
+            <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+              Select the returned product. This will <strong>restock the inventory</strong> and <strong>log the refund money as Income</strong> in your ledger — all in one step.
+            </p>
+            <form onSubmit={handleReturn} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Product Returned</label>
+                <select 
+                  value={retProductId} 
+                  onChange={e => setRetProductId(e.target.value)} 
+                  required 
+                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem" }}
+                >
+                  <option value="">— Select Product —</option>
+                  {products.map((p: any) => (
+                    <option key={p.id} value={p.id.toString()}>
+                      {p.name} (Current Stock: {p.stock})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div>
+                  <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Quantity Returned</label>
+                  <input 
+                    type="number" min="1"
+                    value={retQty} 
+                    onChange={e => setRetQty(e.target.value)} 
+                    required 
+                    style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }} 
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Refund Amount (Rs.)</label>
+                  <input 
+                    type="number" min="0"
+                    value={retAmount} 
+                    onChange={e => setRetAmount(e.target.value)} 
+                    required placeholder="0"
+                    style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }} 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Note (optional)</label>
+                <input 
+                  type="text"
+                  value={retNote} 
+                  onChange={e => setRetNote(e.target.value)} 
+                  placeholder="e.g. Wrong size, defect, customer changed mind..."
+                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }} 
+                />
+              </div>
+
+              {retProductId && (
+                <div style={{ background: "#f0fdf4", border: "1px solid #86efac", padding: "1rem", borderRadius: "4px", fontSize: "0.85rem" }}>
+                  <strong>Preview:</strong><br/>
+                  📦 Restock: <em>{products.find((p: any) => p.id.toString() === retProductId)?.name}</em> +{retQty} units<br/>
+                  💵 Log Income: Rs. {retAmount || "0"} as "Refund Received"
+                </div>
+              )}
+
+              <button 
+                type="submit" 
+                disabled={retLoading}
+                style={{ 
+                  padding: "1rem", background: retLoading ? "#ccc" : "#dc2626", 
+                  color: "white", border: "none", fontWeight: "bold", 
+                  fontSize: "1rem", cursor: retLoading ? "not-allowed" : "pointer",
+                  letterSpacing: "0.05em"
+                }}
+              >
+                {retLoading ? "Processing..." : "↩ PROCESS RETURN"}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>
