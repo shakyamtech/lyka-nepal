@@ -69,7 +69,7 @@ export default function AccountDashboard() {
       if (cost === undefined || cost === null) {
         // Try finding by ID first, then fallback to name matching for older cart schemas
         const live = products.find(p => 
-          p.id === item.id || 
+          p.id?.toString() === item.id?.toString() || 
           (p.name && item.name && p.name.toString().toLowerCase().trim() === item.name.toString().toLowerCase().trim())
         );
         cost = live?.cost || 0;

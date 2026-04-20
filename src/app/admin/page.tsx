@@ -27,10 +27,10 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
         // We ensure item is an object
         if (typeof item !== 'object') return;
 
-        const selectedProduct = filterItemId !== "ALL" ? products.find(p => p.id === filterItemId) : null;
+        const selectedProduct = filterItemId !== "ALL" ? products.find(p => p.id?.toString() === filterItemId.toString()) : null;
         
         if (filterItemId !== "ALL") {
-          const idMatch = item.id === filterItemId;
+          const idMatch = item.id?.toString() === filterItemId.toString();
           const nameMatch = selectedProduct && item.name && selectedProduct.name && 
                             item.name.toString().toLowerCase().trim() === selectedProduct.name.toString().toLowerCase().trim();
           if (!idMatch && !nameMatch) return;
@@ -39,7 +39,7 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
         let itemCost = item.cost;
         if (itemCost === undefined || itemCost === null) {
           const liveProduct = products.find(p => 
-            p.id === item.id || 
+            p.id?.toString() === item.id?.toString() || 
             (p.name && item.name && p.name.toString().toLowerCase().trim() === item.name.toString().toLowerCase().trim())
           );
           itemCost = liveProduct?.cost || 0;
