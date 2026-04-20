@@ -57,7 +57,7 @@ export default function AccountDashboard() {
       if (res.ok) {
         setExpDesc(""); setExpAmount("");
         fetchData();
-        alert("Expense added!");
+        alert(expType === "INCOME" ? "Income added!" : "Expense added!");
       }
     } catch (err) {
       console.error(err);
