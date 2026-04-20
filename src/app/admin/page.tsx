@@ -16,31 +16,31 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
   const calcMetrics = (filteredOrders: any[]) => {
     let revenue = 0;
     let costTotal = 0;
-    
+
     filteredOrders.forEach(o => {
       // items array is JSON: { id, name, price, cost, ... }
       if (!o.items || !Array.isArray(o.rawItems || o.items)) return;
       const orderItems = o.rawItems || o.items;
-      
+
       orderItems.forEach((item: any) => {
         // Since o.items might be strings from an old schema map, we rely on rawItems if possible. 
         // We ensure item is an object
         if (typeof item !== 'object') return;
 
-        if (filterItemId !== "ALL" && String(item.id) !== String(filterItemId)) return;
-        
+        if (filterItemId !== "ALL" && item.id !== filterItemId) return;
+
         let itemCost = item.cost;
         if (itemCost === undefined || itemCost === null) {
           const liveProduct = products.find(p => p.id === item.id);
           itemCost = liveProduct?.cost || 0;
         }
         let itemPrice = item.price || 0;
-        
+
         revenue += Number(itemPrice);
         costTotal += Number(itemCost);
       });
     });
-    
+
     return {
       revenue,
       profit: revenue - costTotal,
@@ -56,8 +56,8 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
     <div style={{ marginBottom: "3rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
         <h2>Analytics & Profit Dashboard</h2>
-        <select 
-          value={filterItemId} 
+        <select
+          value={filterItemId}
           onChange={e => setFilterItemId(e.target.value)}
           style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--border)", fontFamily: "inherit" }}
         >
@@ -79,7 +79,7 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
             <div style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--primary)", marginBottom: "0.5rem" }}>
               NPR {block.metrics.revenue.toLocaleString()}
             </div>
-            
+
             <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #f3f4f6", paddingTop: "0.8rem", marginTop: "0.5rem" }}>
               <div>
                 <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Total Profit</p>
@@ -101,12 +101,12 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
 
 export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
-  
+
   // Login State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showForgot, setShowForgot] = useState(false);
-  
+
   // Reset Password State
   const [resetEmail, setResetEmail] = useState("");
   const [resetKey, setResetKey] = useState("");
@@ -116,7 +116,7 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [orderSearchTerm, setOrderSearchTerm] = useState("");
-  
+
   // New Product Form State
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Clothes");
@@ -125,7 +125,7 @@ export default function AdminPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [stock, setStock] = useState("10");
   const [description, setDescription] = useState("");
-  const [sizeQuantities, setSizeQuantities] = useState<{[key:string]: string}>({});
+  const [sizeQuantities, setSizeQuantities] = useState<{ [key: string]: string }>({});
   const [isVerifying, setIsVerifying] = useState<string | null>(null); // orderId being verified
   const lastSoundTimeRef = useRef<number>(0);
 
@@ -150,7 +150,7 @@ export default function AdminPage() {
       osc.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.15);
-    } catch(e){}
+    } catch (e) { }
   };
 
   const playSweetDing = () => {
@@ -169,23 +169,23 @@ export default function AdminPage() {
         osc.start(startTime);
         osc.stop(startTime + duration);
       };
-      
+
       const now = ctx.currentTime;
       playNote(523.25, now, 0.4); // C
       playNote(659.25, now + 0.15, 0.4); // E
       playNote(783.99, now + 0.3, 0.6); // G
-    } catch(e){}
+    } catch (e) { }
   };
 
   // Polling Effect
   useEffect(() => {
     if (!currentUser) return;
-    
+
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/notifications?since=${lastCheckRef.current}`);
         const data = await res.json();
-        
+
         if (data.length > 0) {
           lastCheckRef.current = Date.now();
           data.forEach((n: any) => {
@@ -199,9 +199,9 @@ export default function AdminPage() {
             setNotifications(prev => [n, ...prev].slice(0, 5));
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }, 3000);
-    
+
     return () => clearInterval(interval);
   }, [currentUser]);
 
@@ -211,7 +211,7 @@ export default function AdminPage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
     });
-    
+
     const data = await res.json();
 
     if (res.ok && data.success) {
@@ -249,12 +249,12 @@ export default function AdminPage() {
   const fetchOrders = async () => {
     const res = await fetch("/api/orders");
     const data = await res.json();
-    if(Array.isArray(data)) setOrders(data.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    if (Array.isArray(data)) setOrders(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
   const fetchUsers = async () => {
     const res = await fetch("/api/users");
     const data = await res.json();
-    if(Array.isArray(data)) setUsers(data);
+    if (Array.isArray(data)) setUsers(data);
   };
 
   // Handlers
@@ -279,7 +279,7 @@ export default function AdminPage() {
       setIsVerifying(null);
     }
   };
-  
+
   const handleDeleteOrder = async (orderId: string) => {
     if (!confirm(`Are you sure you want to permanently delete order ${orderId}? This history cannot be recovered.`)) return;
     const res = await fetch(`/api/orders?id=${orderId}`, { method: "DELETE" });
@@ -294,7 +294,7 @@ export default function AdminPage() {
     formData.append('name', name); formData.append('category', category);
     formData.append('price', price); formData.append('cost', cost);
     formData.append('description', description);
-    
+
     let sizesStr = "";
     let finalStock = stock;
 
@@ -303,7 +303,7 @@ export default function AdminPage() {
       sizesStr = validSizes.map(([sz, qty]) => `${sz}:${qty}`).join(', ');
       finalStock = validSizes.reduce((sum, [, qty]) => sum + Number(qty), 0).toString();
       if (validSizes.length === 0) {
-         return alert("Please enter stock for at least one size.");
+        return alert("Please enter stock for at least one size.");
       }
     }
 
@@ -326,19 +326,19 @@ export default function AdminPage() {
   const handleUpdateStock = async (id: number, currentStock: number) => {
     const newStockStr = prompt(`Update stock for this item. Current stock: ${currentStock}`, currentStock.toString());
     if (newStockStr === null) return; // User cancelled
-    
+
     const newStock = parseInt(newStockStr);
     if (isNaN(newStock) || newStock < 0) {
       alert("Please enter a valid positive number.");
       return;
     }
-    
+
     const res = await fetch(`/api/products`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, stock: newStock })
     });
-    
+
     if (res.ok) {
       fetchProducts();
     } else {
@@ -443,14 +443,14 @@ export default function AdminPage() {
 
   // Render Dashboard
   const lowStockItems = products.filter(p => typeof p.stock === 'number' && p.stock < 3);
-  const topSellers = [...products].sort((a,b) => (b.salesCount || 0) - (a.salesCount || 0)).slice(0, 3);
+  const topSellers = [...products].sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0)).slice(0, 3);
 
   return (
     <div className="admin-dashboard container">
       <h1>LYKA Nepal - Admin Dashboard</h1>
       <p style={{ marginBottom: "2rem" }}>Logged in as <strong>{currentUser.email}</strong> ({currentUser.role})</p>
       <button className="logout-btn" onClick={() => setCurrentUser(null)} style={{ top: "40px" }}>Logout</button>
-      
+
       {lowStockItems.length > 0 && (
         <div style={{ background: "#fee2e2", border: "2px solid #ef4444", padding: "1.5rem", borderRadius: "8px", marginBottom: "2rem" }}>
           <h2 style={{ color: "#b91c1c", marginBottom: "0.5rem" }}>⚠️ LOW STOCK ALERT</h2>
@@ -469,13 +469,13 @@ export default function AdminPage() {
         <h2>Top Selling Items</h2>
         <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
           {topSellers.map((item, index) => (
-             <div key={item.id} style={{ background: "white", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", flex: "1 1 250px", display: "flex", alignItems: "center" }}>
-               <h1 style={{ fontSize: "2.5rem", color: "var(--primary)", marginRight: "1rem" }}>#{index+1}</h1>
-               <div>
-                 <h4>{item.name}</h4>
-                 <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{item.salesCount || 0} units sold</p>
-               </div>
-             </div>
+            <div key={item.id} style={{ background: "white", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", flex: "1 1 250px", display: "flex", alignItems: "center" }}>
+              <h1 style={{ fontSize: "2.5rem", color: "var(--primary)", marginRight: "1rem" }}>#{index + 1}</h1>
+              <div>
+                <h4>{item.name}</h4>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{item.salesCount || 0} units sold</p>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -498,7 +498,7 @@ export default function AdminPage() {
               <input type="number" placeholder="Sale Price (NPR)" value={price} onChange={(e) => setPrice(e.target.value)} required style={{ flex: 1 }} />
               <input type="number" placeholder="Your Cost (NPR)" value={cost} onChange={(e) => setCost(e.target.value)} required style={{ flex: 1 }} />
             </div>
-            <input type="number" placeholder="Stock" value={stock} onChange={(e) => setStock(e.target.value)} required />
+            <input type="number" placeholder="Total Stock (Limit)" value={stock} onChange={(e) => setStock(e.target.value)} required />
             <textarea placeholder="Product Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", minHeight: "80px" }}></textarea>
             {category === 'Clothes' && (
               <div style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", background: "#f9fafb" }}>
@@ -507,12 +507,28 @@ export default function AdminPage() {
                   {['S', 'M', 'L', 'XL', 'XXL'].map(s => (
                     <div key={s} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", width: "60px" }}>
                       <label style={{ fontSize: "0.75rem", fontWeight: "600", textAlign: "center" }}>{s}</label>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        placeholder="0" 
-                        value={sizeQuantities[s] || ""} 
-                        onChange={(e) => setSizeQuantities(prev => ({ ...prev, [s]: e.target.value }))}
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={sizeQuantities[s] || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '') {
+                             setSizeQuantities(prev => ({ ...prev, [s]: val }));
+                             return;
+                          }
+                          const newVal = Number(val);
+                          const currentTotal = Object.entries(sizeQuantities).reduce((sum, [k, v]) => k === s ? sum : sum + Number(v || 0), 0);
+                          const maxAllowed = Number(stock || 0);
+                          
+                          if (currentTotal + newVal <= maxAllowed) {
+                            setSizeQuantities(prev => ({ ...prev, [s]: val }));
+                          } else {
+                            const remaining = Math.max(0, maxAllowed - currentTotal);
+                            setSizeQuantities(prev => ({ ...prev, [s]: remaining.toString() }));
+                          }
+                        }}
                         style={{ padding: "0.4rem", textAlign: "center" }}
                       />
                     </div>
@@ -527,12 +543,28 @@ export default function AdminPage() {
                   {['36', '37', '38', '39', '40', '41', '42'].map(s => (
                     <div key={s} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", width: "50px" }}>
                       <label style={{ fontSize: "0.75rem", fontWeight: "600", textAlign: "center" }}>{s}</label>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        placeholder="0" 
-                        value={sizeQuantities[s] || ""} 
-                        onChange={(e) => setSizeQuantities(prev => ({ ...prev, [s]: e.target.value }))}
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={sizeQuantities[s] || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '') {
+                             setSizeQuantities(prev => ({ ...prev, [s]: val }));
+                             return;
+                          }
+                          const newVal = Number(val);
+                          const currentTotal = Object.entries(sizeQuantities).reduce((sum, [k, v]) => k === s ? sum : sum + Number(v || 0), 0);
+                          const maxAllowed = Number(stock || 0);
+                          
+                          if (currentTotal + newVal <= maxAllowed) {
+                            setSizeQuantities(prev => ({ ...prev, [s]: val }));
+                          } else {
+                            const remaining = Math.max(0, maxAllowed - currentTotal);
+                            setSizeQuantities(prev => ({ ...prev, [s]: remaining.toString() }));
+                          }
+                        }}
                         style={{ padding: "0.4rem", textAlign: "center" }}
                       />
                     </div>
@@ -548,7 +580,7 @@ export default function AdminPage() {
 
         <section className="manage-products">
           <h2>Manage Inventory</h2>
-          
+
           {notifications.length > 0 && (
             <div style={{ background: "#e0f2fe", padding: "1rem", borderRadius: "8px", marginBottom: "2rem", border: "1px solid #bae6fd" }}>
               <h3 style={{ fontSize: "1rem", color: "#0369a1", marginBottom: "0.5rem" }}>Live Notifications</h3>
@@ -583,17 +615,17 @@ export default function AdminPage() {
       <section className="admin-orders" style={{ marginTop: "3rem", padding: "2rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
         <h2>Customer Orders & Payments</h2>
         <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Review uploaded payment screenshots and verify orders to deduct inventory stock.</p>
-        
+
         <div style={{ marginBottom: "2rem", display: "flex", gap: "1rem" }}>
-          <input 
-            type="text" 
-            placeholder="Search by ID, Name, or Email..." 
-            value={orderSearchTerm} 
+          <input
+            type="text"
+            placeholder="Search by ID, Name, or Email..."
+            value={orderSearchTerm}
             onChange={(e) => setOrderSearchTerm(e.target.value)}
             style={{ flex: 1, padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "8px" }}
           />
           {orderSearchTerm && (
-            <button 
+            <button
               onClick={() => setOrderSearchTerm("")}
               style={{ padding: "0.8rem 1.5rem", background: "#e5e7eb", border: "none", borderRadius: "8px", cursor: "pointer" }}
             >
@@ -601,7 +633,7 @@ export default function AdminPage() {
             </button>
           )}
         </div>
-        
+
         {orders.length === 0 ? (
           <p>No orders yet.</p>
         ) : (
@@ -610,70 +642,70 @@ export default function AdminPage() {
               {orders
                 .filter(order => {
                   const s = orderSearchTerm.toLowerCase();
-                  return order.id.toLowerCase().includes(s) || 
-                         order.name.toLowerCase().includes(s) || 
-                         order.email.toLowerCase().includes(s);
+                  return order.id.toLowerCase().includes(s) ||
+                    order.name.toLowerCase().includes(s) ||
+                    order.email.toLowerCase().includes(s);
                 })
                 .map(order => (
-                <div key={order.id} style={{ background: "white", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", gap: "2rem", flexWrap: "wrap" }}>
-                  <div style={{ flex: "1 1 300px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                      <h3 style={{ margin: 0 }}>{order.id}</h3>
-                      <span style={{ 
-                        padding: "0.25rem 0.75rem", 
-                        borderRadius: "50px", 
-                        fontSize: "0.8rem", 
-                        fontWeight: "bold",
-                        background: order.status === 'Verified' ? '#dcfce7' : order.status === 'Rejected' ? '#fee2e2' : '#fef9c3',
-                        color: order.status === 'Verified' ? '#166534' : order.status === 'Rejected' ? '#991b1b' : '#854d0e'
-                       }}>
-                        {order.status || 'Pending'}
-                      </span>
+                  <div key={order.id} style={{ background: "white", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 300px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                        <h3 style={{ margin: 0 }}>{order.id}</h3>
+                        <span style={{
+                          padding: "0.25rem 0.75rem",
+                          borderRadius: "50px",
+                          fontSize: "0.8rem",
+                          fontWeight: "bold",
+                          background: order.status === 'Verified' ? '#dcfce7' : order.status === 'Rejected' ? '#fee2e2' : '#fef9c3',
+                          color: order.status === 'Verified' ? '#166534' : order.status === 'Rejected' ? '#991b1b' : '#854d0e'
+                        }}>
+                          {order.status || 'Pending'}
+                        </span>
+                      </div>
+                      <p><strong>Customer:</strong> {order.name} ({order.email})</p>
+                      <p><strong>Phone:</strong> <a href={`tel:${order.phone}`} style={{ color: "var(--primary)", fontWeight: "bold" }}>{order.phone || "N/A"}</a></p>
+                      <p><strong>Address:</strong> {order.address || "N/A"}</p>
+                      <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
+                      <p><strong>Total:</strong> NPR {order.total}</p>
+
+                      <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                        {(!order.status || order.status === 'Pending Verification') && (
+                          <>
+                            <button
+                              disabled={isVerifying === order.id}
+                              onClick={() => handleVerifyOrder(order.id, 'VERIFY')}
+                              style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
+                            >
+                              {isVerifying === order.id ? "⌛ Verifying..." : "☑ Verify Payment"}
+                            </button>
+                            <button
+                              disabled={isVerifying === order.id}
+                              onClick={() => handleVerifyOrder(order.id, 'REJECT')}
+                              style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
+                            >
+                              {isVerifying === order.id ? "..." : "✕ Reject"}
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleDeleteOrder(order.id)}
+                          style={{ padding: "0.5rem 1rem", background: "none", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: "4px", cursor: "pointer", fontSize: "0.85rem" }}
+                        >
+                          🗑 Delete Record
+                        </button>
+                      </div>
                     </div>
-                    <p><strong>Customer:</strong> {order.name} ({order.email})</p>
-                    <p><strong>Phone:</strong> <a href={`tel:${order.phone}`} style={{ color: "var(--primary)", fontWeight: "bold" }}>{order.phone || "N/A"}</a></p>
-                    <p><strong>Address:</strong> {order.address || "N/A"}</p>
-                    <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
-                    <p><strong>Total:</strong> NPR {order.total}</p>
-                    
-                    <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                      {(!order.status || order.status === 'Pending Verification') && (
-                        <>
-                          <button 
-                            disabled={isVerifying === order.id}
-                            onClick={() => handleVerifyOrder(order.id, 'VERIFY')} 
-                            style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
-                          >
-                            {isVerifying === order.id ? "⌛ Verifying..." : "☑ Verify Payment"}
-                          </button>
-                          <button 
-                            disabled={isVerifying === order.id}
-                            onClick={() => handleVerifyOrder(order.id, 'REJECT')} 
-                            style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
-                          >
-                            {isVerifying === order.id ? "..." : "✕ Reject"}
-                          </button>
-                        </>
-                      )}
-                      <button 
-                        onClick={() => handleDeleteOrder(order.id)} 
-                        style={{ padding: "0.5rem 1rem", background: "none", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: "4px", cursor: "pointer", fontSize: "0.85rem" }}
-                      >
-                        🗑 Delete Record
-                      </button>
-                    </div>
+
+                    {order.screenshotUrl && (
+                      <div style={{ flex: "0 0 300px", borderLeft: "1px solid var(--border)", paddingLeft: "2rem" }}>
+                        <strong>Screenshot:</strong>
+                        <a href={order.screenshotUrl} target="_blank" rel="noreferrer" style={{ display: "block", marginTop: "0.5rem" }}>
+                          <img src={order.screenshotUrl} alt="Payment" style={{ width: "100%", maxHeight: "200px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "4px" }} />
+                        </a>
+                      </div>
+                    )}
                   </div>
-                  
-                  {order.screenshotUrl && (
-                    <div style={{ flex: "0 0 300px", borderLeft: "1px solid var(--border)", paddingLeft: "2rem" }}>
-                      <strong>Screenshot:</strong>
-                      <a href={order.screenshotUrl} target="_blank" rel="noreferrer" style={{ display: "block", marginTop: "0.5rem" }}>
-                        <img src={order.screenshotUrl} alt="Payment" style={{ width: "100%", maxHeight: "200px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "4px" }} />
-                      </a>
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         )}
@@ -682,12 +714,12 @@ export default function AdminPage() {
       {/* Admin Operations Only */}
       {currentUser.role === 'admin' && (
         <div style={{ display: "flex", gap: "2rem", marginTop: "3rem", flexWrap: "wrap" }}>
-          
+
           {/* Team Management */}
           <section style={{ flex: "1 1 400px", padding: "2rem", background: "white", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
             <h2>Staff & User Management</h2>
             <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Add new staff users or admins so they can review orders too.</p>
-            
+
             <form onSubmit={handleAddSubUser} style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "2rem" }}>
               <input type="email" placeholder="New User Email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
               <input type="text" placeholder="Temporary Password" value={newPass} onChange={e => setNewPass(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
@@ -706,7 +738,7 @@ export default function AdminPage() {
                   <li key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", borderBottom: "1px solid var(--border)" }}>
                     <div>
                       <strong>{u.email}</strong> <span style={{ fontSize: "0.8rem", background: "#e5e7eb", padding: "2px 6px", borderRadius: "4px" }}>{u.role}</span>
-                      <br/>
+                      <br />
                       <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Recovery Key: {u.recoveryKey}</span>
                     </div>
                     {u.id !== currentUser.id && (
@@ -722,7 +754,7 @@ export default function AdminPage() {
           <section style={{ flex: "1 1 400px", padding: "2rem", background: "white", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
             <h2>Payment QR Settings</h2>
             <p style={{ marginBottom: "1rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Upload the official Payment QR Code image that will be shown to customers at checkout. We recommend uploading an eSewa or FonePay QR.</p>
-            
+
             <div style={{ border: "2px dashed var(--border)", padding: "2rem", textAlign: "center", borderRadius: "8px" }}>
               <input type="file" accept="image/*" id="qr-upload" style={{ display: "none" }} onChange={handleUploadQR} />
               <label htmlFor="qr-upload" style={{ display: "inline-block", padding: "1rem 2rem", background: "var(--primary)", color: "white", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", marginBottom: "1rem" }}>
@@ -736,7 +768,7 @@ export default function AdminPage() {
           <section style={{ flex: "1 1 400px", padding: "2rem", background: "white", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
             <h2>Hero Background (Parallax)</h2>
             <p style={{ marginBottom: "1rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Upload a high-quality background image for your Storefront's "New Arrivals" section. It will automatically apply a smooth parallax effect.</p>
-            
+
             <div style={{ border: "2px dashed var(--border)", padding: "2rem", textAlign: "center", borderRadius: "8px" }}>
               <input type="file" accept="image/*" id="hero-upload" style={{ display: "none" }} onChange={handleUploadHero} />
               <label htmlFor="hero-upload" style={{ display: "inline-block", padding: "1rem 2rem", background: "var(--primary)", color: "white", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", marginBottom: "1rem" }}>

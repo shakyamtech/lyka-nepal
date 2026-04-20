@@ -249,7 +249,7 @@ a {
   .desktop-only { display: none !important; }
   .mobile-only { display: flex !important; }
   .menu-toggle { display: flex !important; }
-  .container { padding: 0 1.25rem; }
+  .container { padding: 0 0.6rem; }
   .logo { font-size: 1.15rem; white-space: nowrap; }
   .logo-container {
     position: absolute;
