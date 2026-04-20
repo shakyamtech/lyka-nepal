@@ -70,7 +70,7 @@ export default function Navigation() {
             <Link href="/admin" title="Admin Login" style={{ display: 'flex' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             </Link>
-            <a href="#catalog" title="Search" style={{ display: 'flex' }}>
+            <a href="#collection" title="Search" style={{ display: 'flex' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </a>
             <Link href="/#cart" title="Wishlist" style={{ display: 'flex' }}>
@@ -84,7 +84,7 @@ export default function Navigation() {
 
           {/* Mobile Cart / Icons (Right) */}
           <div className="mobile-only" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.8rem" }}>
-            <a href="#catalog" title="Search" style={{ display: "flex", alignItems: "center" }}>
+            <a href="#collection" title="Search" style={{ display: "flex", alignItems: "center" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </a>
             <Link href="/#cart" title="Wishlist" style={{ display: "flex", alignItems: "center" }}>

@@ -65,7 +65,7 @@ export default function Home() {
       const hash = window.location.hash.replace('#', '');
       if (['Clothes', 'Bags', 'Shoes'].includes(hash)) {
         setCategoryFilter(hash);
-        document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' });
       }
     };
     
