@@ -67,7 +67,8 @@ export default function AccountDashboard() {
       if (typeof item !== 'object') return;
       let cost = item.cost;
       if (cost === undefined || cost === null) {
-        const live = products.find(p => p.id === item.id);
+        // Try finding by ID first, then fallback to name matching for older cart schemas
+        const live = products.find(p => p.id === item.id) || products.find(p => p.name === item.name);
         cost = live?.cost || 0;
       }
       cogs += Number(cost);

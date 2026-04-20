@@ -27,7 +27,13 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
         // We ensure item is an object
         if (typeof item !== 'object') return;
 
-        if (filterItemId !== "ALL" && item.id !== filterItemId) return;
+        const selectedProduct = filterItemId !== "ALL" ? products.find(p => p.id === filterItemId) : null;
+        
+        if (filterItemId !== "ALL") {
+          const idMatch = item.id === filterItemId;
+          const nameMatch = selectedProduct && item.name === selectedProduct.name;
+          if (!idMatch && !nameMatch) return;
+        }
 
         let itemCost = item.cost;
         if (itemCost === undefined || itemCost === null) {
