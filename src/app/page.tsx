@@ -344,7 +344,6 @@ export default function Home() {
             )}
             {filteredProducts.map((product) => <ProductCard key={`grid-${product.id}`} product={product} />)}
           </div>
-          </div>
         </div>
 
         {/* Promotional Sale Banners */}
