@@ -31,13 +31,17 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
         
         if (filterItemId !== "ALL") {
           const idMatch = item.id === filterItemId;
-          const nameMatch = selectedProduct && item.name === selectedProduct.name;
+          const nameMatch = selectedProduct && item.name && selectedProduct.name && 
+                            item.name.toString().toLowerCase().trim() === selectedProduct.name.toString().toLowerCase().trim();
           if (!idMatch && !nameMatch) return;
         }
 
         let itemCost = item.cost;
         if (itemCost === undefined || itemCost === null) {
-          const liveProduct = products.find(p => p.id === item.id);
+          const liveProduct = products.find(p => 
+            p.id === item.id || 
+            (p.name && item.name && p.name.toString().toLowerCase().trim() === item.name.toString().toLowerCase().trim())
+          );
           itemCost = liveProduct?.cost || 0;
         }
         let itemPrice = item.price || 0;
