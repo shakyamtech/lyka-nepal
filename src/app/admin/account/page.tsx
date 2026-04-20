@@ -293,6 +293,50 @@ export default function AccountDashboard() {
             <span>NET PROFIT:</span>
             <span style={{ color: netProfit >= 0 ? "green" : "red" }}>Rs. {netProfit.toLocaleString()}</span>
           </div>
+
+          {/* Per-Order Breakdown */}
+          <div style={{ marginTop: "3rem" }}>
+            <h3 style={{ borderBottom: "1px solid #ccc", paddingBottom: "0.5rem", marginBottom: "1rem" }}>📋 Order-by-Order Margin Breakdown</h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <thead>
+                <tr style={{ background: "#111", color: "white", textAlign: "left" }}>
+                  <th style={{ padding: "0.7rem 1rem" }}>Customer</th>
+                  <th style={{ padding: "0.7rem 1rem" }}>Date</th>
+                  <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Sale Price</th>
+                  <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Cost (COGS)</th>
+                  <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Margin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o, i) => {
+                  const cogs = calculateCOGS(o);
+                  const revenue = Number(o.total || 0);
+                  const margin = revenue - cogs;
+                  return (
+                    <tr key={i} style={{ borderBottom: "1px solid #eee", background: i % 2 === 0 ? "#fafafa" : "white" }}>
+                      <td style={{ padding: "0.7rem 1rem" }}>{o.customerName || "—"}</td>
+                      <td style={{ padding: "0.7rem 1rem", color: "#666" }}>{o.date ? new Date(o.date).toLocaleDateString() : "—"}</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {revenue.toLocaleString()}</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "red" }}>Rs. {cogs.toLocaleString()}</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "green" : "red" }}>
+                        {margin >= 0 ? "+" : ""}Rs. {margin.toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr style={{ background: "#111", color: "white", fontWeight: "bold" }}>
+                  <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL</td>
+                  <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {totalSalesRevenue.toLocaleString()}</td>
+                  <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {totalCOGS.toLocaleString()}</td>
+                  <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: grossProfit >= 0 ? "#4ade80" : "#f87171" }}>
+                    {grossProfit >= 0 ? "+" : ""}Rs. {grossProfit.toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
       )}
 
