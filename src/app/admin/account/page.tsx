@@ -9,6 +9,7 @@ export default function AccountDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [returnRequests, setReturnRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Expense Form State
@@ -46,6 +47,8 @@ export default function AccountDashboard() {
       if (resO.ok) setOrders((await resO.json()).filter((o: any) => o.status === "Verified" || o.status === "Paid & Verified" || !o.status));
       if (resP.ok) setProducts(await resP.json());
       if (resE.ok) setExpenses(await resE.json());
+      const resR = await fetch("/api/returns");
+      if (resR.ok) setReturnRequests(await resR.json());
     } catch (err) {
       console.error(err);
     }
@@ -89,6 +92,58 @@ export default function AccountDashboard() {
       alert("Error: " + err.message);
     }
     setRetLoading(false);
+  };
+
+  const handleApproveReturn = async (req: any) => {
+    const refundAmt = prompt(`Enter refund amount (Rs.) for ${req.customer_name}'s return of "${req.product_name}":`);
+    if (!refundAmt) return;
+    setRetLoading(true);
+    try {
+      // Find the product and restock
+      const product = products.find((p: any) =>
+        p.id.toString() === req.product_id ||
+        p.name.toLowerCase().trim() === req.product_name.toLowerCase().trim()
+      );
+      if (product) {
+        const newStock = Number(product.stock) + Number(req.quantity);
+        await fetch("/api/products", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: product.id, stock: newStock })
+        });
+      }
+      // Log refund income
+      await fetch("/api/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "INCOME", category: "Refund Received",
+          description: `Return approved: ${req.product_name} x${req.quantity} — ${req.customer_name} (${req.customer_phone})`,
+          amount: Number(refundAmt)
+        })
+      });
+      // Mark request as approved
+      await fetch("/api/returns", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: req.id, status: "APPROVED" })
+      });
+      alert(`✅ Approved! ${product ? `Stock updated.` : `(Product not matched — check manually.)`} Rs. ${refundAmt} logged as Refund Income.`);
+      fetchData();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    }
+    setRetLoading(false);
+  };
+
+  const handleRejectReturn = async (id: string) => {
+    if (!confirm("Reject this return request?")) return;
+    await fetch("/api/returns", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "REJECTED" })
+    });
+    fetchData();
   };
 
   const handleAddExpense = async (e: React.FormEvent) => {
@@ -460,7 +515,71 @@ export default function AccountDashboard() {
       )}
 
       {activeTab === "RETURNS" && (
-        <div style={{ maxWidth: "600px" }}>
+        <div style={{ maxWidth: "900px" }}>
+          {/* Pending Requests Section */}
+          <div style={{ marginBottom: "3rem" }}>
+            <h2 style={{ borderBottom: "2px solid black", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>📋 Pending Customer Return Requests</h2>
+            
+            {returnRequests.filter(r => r.status === 'PENDING').length === 0 ? (
+              <p style={{ color: "#999", fontStyle: "italic", padding: "2rem", background: "#f9f9f9", textAlign: "center", border: "1px dashed #ccc" }}>
+                No pending return requests from customers.
+              </p>
+            ) : (
+              <div style={{ display: "grid", gap: "1rem" }}>
+                {returnRequests.filter(r => r.status === 'PENDING').map((req) => (
+                  <div key={req.id} style={{ background: "#fff", border: "1px solid #e0e0e0", padding: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", gap: "1rem", alignItems: "baseline", marginBottom: "0.5rem" }}>
+                        <span style={{ fontWeight: "800", fontSize: "1.1rem" }}>{req.customer_name}</span>
+                        <span style={{ color: "#666", fontSize: "0.85rem" }}>{req.customer_phone}</span>
+                        <span style={{ color: "#999", fontSize: "0.8rem" }}>{new Date(req.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div style={{ marginBottom: "0.5rem" }}>
+                        <strong style={{ color: "#dc2626" }}>Product: </strong> 
+                        <span>{req.product_name} (x{req.quantity})</span>
+                      </div>
+                      <div>
+                        <strong>Reason: </strong>
+                        <span style={{ color: "#666", fontSize: "0.9rem" }}>{req.reason || "No reason provided"}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "0.8rem" }}>
+                      <button 
+                        onClick={() => handleApproveReturn(req)}
+                        disabled={retLoading}
+                        style={{ background: "#16a34a", color: "white", border: "none", padding: "0.6rem 1.2rem", fontWeight: "bold", cursor: "pointer", borderRadius: "4px" }}
+                      >
+                        APPROVE
+                      </button>
+                      <button 
+                        onClick={() => handleRejectReturn(req.id)}
+                        disabled={retLoading}
+                        style={{ background: "transparent", color: "#dc2626", border: "1px solid #dc2626", padding: "0.6rem 1.2rem", fontWeight: "bold", cursor: "pointer", borderRadius: "4px" }}
+                      >
+                        REJECT
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Recently Processed Requests (Optional overview) */}
+            {returnRequests.filter(r => r.status !== 'PENDING').length > 0 && (
+              <div style={{ marginTop: "2rem" }}>
+                <h4 style={{ color: "#666", marginBottom: "1rem" }}>History (Approved/Rejected)</h4>
+                <div style={{ display: "grid", gap: "0.5rem", opacity: 0.6 }}>
+                  {returnRequests.filter(r => r.status !== 'PENDING').slice(0, 5).map((req) => (
+                    <div key={req.id} style={{ fontSize: "0.85rem", display: "flex", justifyContent: "space-between", background: "#f5f5f5", padding: "0.5rem 1rem" }}>
+                      <span>{req.customer_name} — {req.product_name}</span>
+                      <strong style={{ color: req.status === 'APPROVED' ? 'green' : 'red' }}>{req.status}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div style={{ background: "#fff5f5", border: "2px solid #dc2626", padding: "2rem", borderRadius: "4px", marginBottom: "2rem" }}>
             <h2 style={{ color: "#dc2626", borderBottom: "1px solid #fca5a5", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>↩ Customer Return / Refund</h2>
             <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
