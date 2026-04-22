@@ -376,7 +376,7 @@ a {
   transform: translateY(10px);
 }
 
-.fab-container:hover .fab-label {
+.fab-main:hover + .fab-label {
   opacity: 1;
   transform: translateY(0);
 }

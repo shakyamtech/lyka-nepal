@@ -15,6 +15,7 @@ function HomeContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [selectedSizes, setSelectedSizes] = useState<{[key: number]: string}>({});
+  const [showAll, setShowAll] = useState(false);
   
   const searchParams = useSearchParams();
   
@@ -239,11 +240,13 @@ function HomeContent() {
 
   const totalBill = cart.reduce((sum, item) => sum + item.price, 0);
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "All" || p.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProducts = products
+    .filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === "All" || p.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0));
 
   const ProductCard = ({ product }: { product: any }) => (
     <div className="product-card">
@@ -428,8 +431,19 @@ function HomeContent() {
                 No products found.
               </p>
             )}
-            {filteredProducts.map((product) => <ProductCard key={`grid-${product.id}`} product={product} />)}
+            {filteredProducts.slice(0, showAll ? undefined : 12).map((product) => <ProductCard key={`grid-${product.id}`} product={product} />)}
           </div>
+
+          {!showAll && filteredProducts.length > 12 && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3.5rem', marginBottom: '2rem' }}>
+              <button 
+                onClick={() => setShowAll(true)} 
+                className="view-all-btn"
+              >
+                VIEW ALL
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Individual Category Sliders */}

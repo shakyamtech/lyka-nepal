@@ -129,7 +129,20 @@ export default function RootLayout({
             </div>
           </div>
           <div className="footer-bottom">
-            <p>&copy; {new Date().getFullYear()} LYKA Nepal. All rights reserved.</p>
+            <div style={{ display: 'flex', gap: '3.5rem', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem', flexWrap: 'wrap' }}>
+              {/* eSewa */}
+              <img src="/esewa.svg?v=2" alt="eSewa" style={{ height: '35px' }} />
+              
+              {/* Khalti */}
+              <img src="/Khalti.svg" alt="Khalti" style={{ height: '32px' }} />
+              
+              {/* Bank Transfer */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#fff', opacity: 0.8 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"></path><path d="M3 10h18"></path><path d="M5 6l7-3 7 3"></path><path d="M4 10v11"></path><path d="M20 10v11"></path><path d="M8 14v3"></path><path d="M12 14v3"></path><path d="M16 14v3"></path></svg>
+                <span style={{ fontSize: '0.8rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Bank Transfer</span>
+              </div>
+            </div>
+            <p>&copy; {new Date().getFullYear()} LYKA Nepal. All rights reserved. Premium Fashion for the Modern Woman.</p>
           </div>
         </footer>
       </body>
