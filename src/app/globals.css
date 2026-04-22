@@ -76,10 +76,15 @@ a {
 }
 
 .sticky-nav-wrapper {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
   z-index: 1000;
   width: 100%;
+}
+
+main {
+  padding-top: 120px; /* Offset for fixed header */
 }
 
 /* ─── Header ─── */
