@@ -113,6 +113,7 @@ export default function Navigation() {
 
   return (
     <>
+    <div className="sticky-nav-wrapper">
       {/* Announcement Bar */}
       <div className="announcement-bar">
         <div className="announcement-content">
@@ -209,6 +210,7 @@ export default function Navigation() {
 
         </div>
       </header>
+    </div>
 
       {/* Mobile Side Menu */}
       <div className={`side-menu-overlay ${isOpen ? "active" : ""}`} onClick={closeMenu}></div>
