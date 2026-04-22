@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import "./page.css";
 
-export default function Home() {
+// Separate content component to use searchParams
+function HomeContent() {
   const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,6 +15,15 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [selectedSizes, setSelectedSizes] = useState<{[key: number]: string}>({});
+  
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    let category = searchParams.get('category');
+    // Normalize "Bags & Accessories" to match the internal "Bags" filter
+    if (category === "Bags & Accessories") category = "Bags";
+    setCategoryFilter(category || "All");
+  }, [searchParams]);
   
   const sliderRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +50,54 @@ export default function Home() {
   const [customerAddress, setCustomerAddress] = useState("");
 
   const [heroBg, setHeroBg] = useState(""); // Dynamic Hero Background
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return audioCtxRef.current;
+  };
+
+  const playBlip = () => {
+    try {
+      const ctx = initAudio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (e) {}
+  };
+
+  const playSweetDing = () => {
+    try {
+      const ctx = initAudio();
+      const playNote = (freq: number, startTime: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.4, startTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+      const now = ctx.currentTime;
+      playNote(523.25, now, 0.4); 
+      playNote(659.25, now + 0.15, 0.4); 
+      playNote(783.99, now + 0.3, 0.6); 
+    } catch (e) { }
+  };
 
   useEffect(() => {
     fetch('/api/products')
@@ -104,6 +164,7 @@ export default function Home() {
     };
 
     setCart([...cart, itemToAdd]);
+    playBlip();
     
     // Silent notification to admin
     fetch('/api/notifications', {
@@ -162,8 +223,10 @@ export default function Home() {
         setCart([]);
         localStorage.removeItem('lyka_cart');
         
-        // Redirect to success page indicating verification is pending
-        window.location.href = `/success?orderId=${data.orderId}&total=${totalBill}&status=pending`;
+        // Redirect to success page (the "Sweet Ding" is now played on that page load)
+        setTimeout(() => {
+          window.location.href = `/success?orderId=${data.orderId}&total=${totalBill}&status=pending`;
+        }, 100);
       } else {
         alert("Failed to submit order. Please try again.");
         setIsProcessing(false);
@@ -252,6 +315,29 @@ export default function Home() {
     </div>
   );
 
+  const CategoryScroll = ({ products, category }: { products: any[], category: string }) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const handleScroll = (dir: 'left' | 'right') => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollBy({ left: dir === 'left' ? -350 : 350, behavior: 'smooth' });
+      }
+    };
+
+    return (
+      <>
+        <button className="slider-arrow left" onClick={() => handleScroll('left')} aria-label="Previous">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="20" y1="12" x2="4" y2="12"></line><polyline points="10 18 4 12 10 6"></polyline></svg>
+        </button>
+        <div className="product-grid horizontal-scroll" ref={scrollRef}>
+          {products.map((product) => <ProductCard key={`slider-${category}-${product.id}`} product={product} />)}
+        </div>
+        <button className="slider-arrow right" onClick={() => handleScroll('right')} aria-label="Next">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="14 6 20 12 14 18"></polyline></svg>
+        </button>
+      </>
+    );
+  };
+
   return (
     <>
       {/* Hero */}
@@ -280,8 +366,8 @@ export default function Home() {
         {/* Top Section: New Arrivals Slider */}
         <div style={{ marginBottom: '1rem' }}>
           <div className="slider-wrapper">
-            <button className="slider-arrow left" onClick={scrollLeft} aria-label="Scroll left">
-              <svg width="40" height="15" viewBox="0 0 32 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1 L1 6 L6 11 M1 6 L32 6"/></svg>
+            <button className="slider-arrow left" onClick={scrollLeft} aria-label="Previous">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="20" y1="12" x2="4" y2="12"></line><polyline points="10 18 4 12 10 6"></polyline></svg>
             </button>
             <div className="product-grid horizontal-scroll" ref={sliderRef}>
               {products.length === 0 && (
@@ -291,17 +377,15 @@ export default function Home() {
               )}
               {products.map((product) => <ProductCard key={`slider-${product.id}`} product={product} />)}
             </div>
-            <button className="slider-arrow right" onClick={scrollRight} aria-label="Scroll right">
-              <svg width="40" height="15" viewBox="0 0 32 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M26 1 L31 6 L26 11 M31 6 L0 6"/></svg>
+            <button className="slider-arrow right" onClick={scrollRight} aria-label="Next">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="14 6 20 12 14 18"></polyline></svg>
             </button>
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2.5rem', marginBottom: '4rem' }}>
             <button 
               onClick={() => { document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' }) }} 
-              style={{ padding: '0.8rem 3rem', background: 'transparent', border: '1px solid #111', fontWeight: 'bold', letterSpacing: '0.15em', fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' }}
-              onMouseOver={(e) => { e.currentTarget.style.background = '#111'; e.currentTarget.style.color = '#fff' }}
-              onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#111' }}
+              className="view-all-btn"
             >
               VIEW ALL
             </button>
@@ -327,7 +411,9 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            <label htmlFor="product-search" className="visually-hidden">Search products</label>
             <input
+              id="product-search"
               type="search"
               placeholder="Search products..."
               value={searchTerm}
@@ -346,6 +432,39 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Individual Category Sliders */}
+        <div className="container" style={{ marginTop: '2rem' }}>
+          {[
+            { title: "Clothes", cat: "Clothes" },
+            { title: "Bags & Accessories", cat: "Bags" },
+            { title: "Shoes", cat: "Shoes" }
+          ].map((item) => {
+            const catProducts = products.filter(p => p.category === item.cat);
+            if (catProducts.length === 0) return null;
+            
+            return (
+              <div key={item.cat} style={{ marginTop: '5rem', marginBottom: '4rem' }}>
+                <div className="section-header" style={{ marginBottom: '1.5rem' }}>
+                  <h2>{item.title}</h2>
+                </div>
+                <div className="slider-wrapper">
+                  <CategoryScroll products={catProducts} category={item.cat} />
+                </div>
+                
+                {/* Centered View All Button below each slider */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3rem' }}>
+                  <Link 
+                    href={`/?category=${item.cat}#collection`}
+                    className="view-all-btn"
+                  >
+                    VIEW ALL
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Promotional Sale Banners */}
         <div className="promo-section">
           {/* Left Promo: Season Sale */}
@@ -358,10 +477,12 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right Promo: 50% Off */}
+          {/* Right Promo: Premium Knitwear */}
           <div className="promo-banner" style={{ backgroundImage: "url('/promo-half-price.png')" }}>
             <span className="promo-side-text right">50%</span>
-            <div className="promo-content" style={{ padding: "1.5rem" }}>
+            <div className="promo-content">
+              <h3>NEW</h3>
+              <p>#PREMIUM KNITWEAR</p>
               <a href="/#Shoes" className="promo-btn">VIEW</a>
             </div>
           </div>
@@ -409,10 +530,14 @@ export default function Home() {
 
               {!showQR ? (
                 <form className="checkout-form" onSubmit={handleCheckout}>
-                  <input type="text" placeholder="Full Name" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
-                  <input type="email" placeholder="Email Address" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} required />
-                  <input type="tel" placeholder="Phone Number" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required />
-                  <textarea placeholder="Delivery Address (e.g., Imadole Area)" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} required></textarea>
+                  <label htmlFor="cust-name" className="visually-hidden">Full Name</label>
+                  <input id="cust-name" type="text" placeholder="Full Name" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
+                  <label htmlFor="cust-email" className="visually-hidden">Email Address</label>
+                  <input id="cust-email" type="email" placeholder="Email Address" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} required />
+                  <label htmlFor="cust-phone" className="visually-hidden">Phone Number</label>
+                  <input id="cust-phone" type="tel" placeholder="Phone Number" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required />
+                  <label htmlFor="cust-address" className="visually-hidden">Delivery Address</label>
+                  <textarea id="cust-address" placeholder="Delivery Address (e.g., Imadole Area)" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} required></textarea>
                   <button type="submit" className="checkout-btn">Proceed to Payment</button>
                 </form>
               ) : (
@@ -436,10 +561,10 @@ export default function Home() {
                       />
                     </div>
                   </div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#666', marginBottom: '0.4rem', display: 'block' }}>
+                  <label htmlFor="screenshot-upload" style={{ fontSize: '0.78rem', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#666', marginBottom: '0.4rem', display: 'block' }}>
                     Upload Payment Screenshot:
                   </label>
-                  <input type="file" accept="image/*" onChange={e => setPaymentScreenshot(e.target.files?.[0] || null)} required style={{ marginBottom: '1rem' }} />
+                  <input id="screenshot-upload" type="file" accept="image/*" onChange={e => setPaymentScreenshot(e.target.files?.[0] || null)} required style={{ marginBottom: '1rem' }} />
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button type="button" onClick={() => setShowQR(false)} style={{ flex: 1, padding: '0.9rem', background: 'white', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif' }}>← Back</button>
                     <button type="submit" className="checkout-btn" disabled={isProcessing} style={{ flex: 2, margin: 0 }}>
@@ -452,7 +577,44 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {/* Features Section */}
+      <section className="features-section">
+        <div className="container">
+          <div className="features-grid">
+            <Link href="/payment-methods" className="feature-item" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+              <div className="feature-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="23"></line></svg>
+              </div>
+              <h3>PAYMENT</h3>
+              <p>We accept all Mobile Banking, eSewa, and Khalti for your convenience.</p>
+            </Link>
+            <Link href="/request-return" className="feature-item" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+              <div className="feature-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              </div>
+              <h3>RETURN</h3>
+              <p>Return your order easily with just one click.</p>
+            </Link>
+            <Link href="/shipping" className="feature-item" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+              <div className="feature-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              </div>
+              <h3>DELIVERY</h3>
+              <p>Delivery available for any location; domestic or international.</p>
+            </Link>
+          </div>
+        </div>
+      </section>
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="loading">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
 

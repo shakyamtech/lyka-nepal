@@ -9,6 +9,7 @@ export default function AccountDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
   const [returnRequests, setReturnRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,8 +32,12 @@ export default function AccountDashboard() {
   const [retAmount, setRetAmount] = useState("");
   const [retNote, setRetNote] = useState("");
   const [retLoading, setRetLoading] = useState(false);
+  const [cleanupPhone, setCleanupPhone] = useState("");
+  const [approvingReqId, setApprovingReqId] = useState<string | null>(null);
+  const [tempRefundAmt, setTempRefundAmt] = useState("");
 
   useEffect(() => {
+    setIsMounted(true);
     fetchData();
   }, []);
 
@@ -62,7 +67,11 @@ export default function AccountDashboard() {
     try {
       const product = products.find((p: any) => p.id.toString() === retProductId);
       if (!product) { alert("Product not found"); setRetLoading(false); return; }
-      const newStock = Number(product.stock) + Number(retQty);
+      const qtyNum = Number(retQty);
+      if (qtyNum > 50) return alert("❌ Error: Return quantity cannot exceed 50. For larger adjustments, please use the Stock Refill tool.");
+      if (qtyNum > 10 && !window.confirm(`⚠️ You are returning ${qtyNum} units. Are you sure?`)) return;
+
+      const newStock = Number(product.stock) + qtyNum;
 
       // 1. Restock the product
       const stockRes = await fetch("/api/products", {
@@ -72,21 +81,32 @@ export default function AccountDashboard() {
       });
       if (!stockRes.ok) throw new Error("Failed to restock product");
 
-      // 2. Log refund income in ledger
+      // 2. Log refund as expense in ledger
       const ledgerRes = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "INCOME",
-          category: "Refund Received",
-          description: `Return: ${product.name} x${retQty}${retNote ? ` — ${retNote}` : ""}`,
+          type: "EXPENSE",
+          category: "Refund Paid",
+          description: `Customer Return: ${product.name} x${retQty}${retNote ? ` — ${retNote}` : ""}${cleanupPhone ? ` (Order Cleaned: ${cleanupPhone})` : ""}`,
           amount: Number(retAmount)
         })
       });
       if (!ledgerRes.ok) throw new Error("Failed to log refund");
 
-      alert(`✅ Done! ${product.name} restocked (+${retQty} units) and Rs. ${retAmount} logged as Refund Income.`);
-      setRetProductId(""); setRetQty("1"); setRetAmount(""); setRetNote("");
+      // 3. OPTIONAL CLEANUP: Delete order for this phone
+      if (cleanupPhone) {
+        const matchingOrder = orders.find((o: any) =>
+          o.phone === cleanupPhone ||
+          o.customer_phone === cleanupPhone
+        );
+        if (matchingOrder) {
+          await fetch(`/api/orders?id=${matchingOrder.id}`, { method: "DELETE" });
+        }
+      }
+
+      alert(`✅ Done! ${product.name} restocked (+${retQty} units) and Rs. ${retAmount} logged as Refund Expense.${cleanupPhone ? " Customer history cleaned." : ""}`);
+      setRetProductId(""); setRetQty("1"); setRetAmount(""); setRetNote(""); setCleanupPhone("");
       fetchData();
     } catch (err: any) {
       alert("Error: " + err.message);
@@ -95,8 +115,12 @@ export default function AccountDashboard() {
   };
 
   const handleApproveReturn = async (req: any) => {
-    const refundAmt = prompt(`Enter refund amount (Rs.) for ${req.customer_name}'s return of "${req.product_name}":`);
-    if (!refundAmt) return;
+    const refundAmt = Number(tempRefundAmt);
+    if (!refundAmt || isNaN(refundAmt)) {
+      alert("Please enter a valid refund amount.");
+      return;
+    }
+    if (refundAmt > 100000) return alert("❌ Error: Refund amount seems too high (limit Rs. 100,000 for safety).");
     setRetLoading(true);
     try {
       // Find the product and restock
@@ -112,14 +136,14 @@ export default function AccountDashboard() {
           body: JSON.stringify({ id: product.id, stock: newStock })
         });
       }
-      // Log refund income
+      // Log refund expense
       await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "INCOME", category: "Refund Received",
+          type: "EXPENSE", category: "Refund Paid",
           description: `Return approved: ${req.product_name} x${req.quantity} — ${req.customer_name} (${req.customer_phone})`,
-          amount: Number(refundAmt)
+          amount: refundAmt
         })
       });
       // Mark request as approved
@@ -128,7 +152,22 @@ export default function AccountDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: req.id, status: "APPROVED" })
       });
-      alert(`✅ Approved! ${product ? `Stock updated.` : `(Product not matched — check manually.)`} Rs. ${refundAmt} logged as Refund Income.`);
+
+      // CLEANUP ORDER HISTORY: Find and delete order for this customer phone
+      if (req.customer_phone) {
+        const matchingOrder = orders.find((o: any) =>
+          o.phone === req.customer_phone ||
+          (o.customer_phone === req.customer_phone)
+        );
+        if (matchingOrder) {
+          console.log("Cleaning up order:", matchingOrder.id);
+          await fetch(`/api/orders?id=${matchingOrder.id}`, { method: "DELETE" });
+        }
+      }
+
+      alert(`✅ Approved! ${product ? `Stock updated.` : `(Product not matched — check manually.)`} Rs. ${refundAmt} logged as Refund Expense and customer history cleaned.`);
+      setApprovingReqId(null);
+      setTempRefundAmt("");
       fetchData();
     } catch (err: any) {
       alert("Error: " + err.message);
@@ -137,12 +176,24 @@ export default function AccountDashboard() {
   };
 
   const handleRejectReturn = async (id: string) => {
+    console.log(`Rejecting return ${id}`);
     if (!confirm("Reject this return request?")) return;
-    await fetch("/api/returns", {
+    const res = await fetch("/api/returns", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status: "REJECTED" })
     });
+    if (res.ok) {
+      // Log notification for Reject so staff hears the sad sound
+      await fetch("/api/notifications", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          timestamp: Date.now(),
+          type: 'REJECT',
+          message: `Return request ${id} was rejected.`
+        })
+      });
+    }
     fetchData();
   };
 
@@ -207,8 +258,8 @@ export default function AccountDashboard() {
       let cost = item.cost;
       if (cost === undefined || cost === null) {
         // Try finding by ID first, then fallback to name matching for older cart schemas
-        const live = products.find(p => 
-          p.id?.toString() === item.id?.toString() || 
+        const live = products.find(p =>
+          p.id?.toString() === item.id?.toString() ||
           (p.name && item.name && p.name.toString().toLowerCase().trim() === item.name.toString().toLowerCase().trim())
         );
         cost = live?.cost || 0;
@@ -240,6 +291,8 @@ export default function AccountDashboard() {
   const inventoryRetailValue = products.reduce((sum, p) => sum + (Number(p.stock) * Number(p.price || 0)), 0);
   const inventoryUnits = products.reduce((sum, p) => sum + Number(p.stock), 0);
 
+  if (!isMounted) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading Accounting Suite...</div>;
+
   return (
     <div className="admin-container" style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
@@ -249,11 +302,11 @@ export default function AccountDashboard() {
 
       <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "1px solid #ccc", paddingBottom: "1rem" }}>
         {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].map(tab => (
-          <button 
-            key={tab} 
+          <button
+            key={tab}
             onClick={() => setActiveTab(tab)}
-            style={{ 
-              padding: "0.8rem 1.5rem", 
+            style={{
+              padding: "0.8rem 1.5rem",
               background: activeTab === tab ? (tab === "RETURNS" ? "#dc2626" : "black") : "transparent",
               color: activeTab === tab ? "white" : (tab === "RETURNS" ? "#dc2626" : "black"),
               border: `1px solid ${tab === "RETURNS" ? "#dc2626" : "black"}`,
@@ -283,6 +336,7 @@ export default function AccountDashboard() {
                     <option value="Salary">Staff Salary</option>
                     <option value="Rent">Rent & Utilities</option>
                     <option value="Misc">Miscellaneous Expense</option>
+                    <option value="Refund Paid">Refund Paid (to Customer)</option>
                   </>
                 ) : (
                   <>
@@ -302,7 +356,7 @@ export default function AccountDashboard() {
               <h4>Today's Summary</h4>
               <p>Cash Inflow: <strong style={{ color: "green" }}>Rs.{totalDailyInflow.toLocaleString()}</strong></p>
               <p>Cash Outflow: <strong style={{ color: "red" }}>Rs.{todaysExpensesAmount.toLocaleString()}</strong></p>
-              <hr style={{ margin: "1rem 0" }}/>
+              <hr style={{ margin: "1rem 0" }} />
               <p>Net Daily Position: <strong>Rs.{(totalDailyInflow - todaysExpensesAmount).toLocaleString()}</strong></p>
             </div>
           </div>
@@ -325,6 +379,7 @@ export default function AccountDashboard() {
                             <option value="Salary">Staff Salary</option>
                             <option value="Rent">Rent & Utilities</option>
                             <option value="Misc">Miscellaneous Expense</option>
+                            <option value="Refund Paid">Refund Paid (to Customer)</option>
                           </>
                         ) : (
                           <>
@@ -366,7 +421,7 @@ export default function AccountDashboard() {
         <div style={{ background: "white", padding: "3rem", border: "1px solid #e0e0e0", maxWidth: "800px" }}>
           <h2>Profit & Loss Statement (All Time)</h2>
           <hr style={{ margin: "2rem 0" }} />
-          
+
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", marginBottom: "0.5rem" }}>
             <span>Gross Web Sales Revenue:</span>
             <span>Rs. {totalSalesRevenue.toLocaleString()}</span>
@@ -389,7 +444,7 @@ export default function AccountDashboard() {
             <span>(-) Total Manual Expenses:</span>
             <span>- Rs. {totalOpEx.toLocaleString()}</span>
           </div>
-          
+
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.8rem", fontWeight: "900", background: "#f0f0f0", padding: "1rem" }}>
             <span>NET PROFIT:</span>
             <span style={{ color: netProfit >= 0 ? "green" : "red" }}>Rs. {netProfit.toLocaleString()}</span>
@@ -519,7 +574,7 @@ export default function AccountDashboard() {
           {/* Pending Requests Section */}
           <div style={{ marginBottom: "3rem" }}>
             <h2 style={{ borderBottom: "2px solid black", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>📋 Pending Customer Return Requests</h2>
-            
+
             {returnRequests.filter(r => r.status === 'PENDING').length === 0 ? (
               <p style={{ color: "#999", fontStyle: "italic", padding: "2rem", background: "#f9f9f9", textAlign: "center", border: "1px dashed #ccc" }}>
                 No pending return requests from customers.
@@ -535,29 +590,100 @@ export default function AccountDashboard() {
                         <span style={{ color: "#999", fontSize: "0.8rem" }}>{new Date(req.created_at).toLocaleDateString()}</span>
                       </div>
                       <div style={{ marginBottom: "0.5rem" }}>
-                        <strong style={{ color: "#dc2626" }}>Product: </strong> 
+                        <strong style={{ color: "#dc2626" }}>Product: </strong>
                         <span>{req.product_name} (x{req.quantity})</span>
+                        {(() => {
+                          const prod = products.find(p => p.id?.toString() === req.product_id?.toString() || p.id === req.product_id);
+                          if (prod) {
+                            return (
+                              <span style={{ marginLeft: "0.5rem", color: "#16a34a", fontWeight: "bold", fontSize: "0.85rem" }}>
+                                [Sold for: NPR {(prod.price * (req.quantity || 1)).toLocaleString()}]
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                       <div>
                         <strong>Reason: </strong>
                         <span style={{ color: "#666", fontSize: "0.9rem" }}>{req.reason || "No reason provided"}</span>
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: "0.8rem" }}>
-                      <button 
-                        onClick={() => handleApproveReturn(req)}
-                        disabled={retLoading}
-                        style={{ background: "#16a34a", color: "white", border: "none", padding: "0.6rem 1.2rem", fontWeight: "bold", cursor: "pointer", borderRadius: "4px" }}
-                      >
-                        APPROVE
-                      </button>
-                      <button 
-                        onClick={() => handleRejectReturn(req.id)}
-                        disabled={retLoading}
-                        style={{ background: "transparent", color: "#dc2626", border: "1px solid #dc2626", padding: "0.6rem 1.2rem", fontWeight: "bold", cursor: "pointer", borderRadius: "4px" }}
-                      >
-                        REJECT
-                      </button>
+                    <div style={{ display: "flex", gap: "0.8rem", position: "relative", zIndex: 10, alignItems: "center" }}>
+                      {approvingReqId === req.id ? (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.4rem" }}>
+                          {(() => {
+                            const prod = products.find(p => p.id?.toString() === req.product_id?.toString() || p.id === req.product_id);
+                            if (prod) {
+                              return <span style={{ fontSize: "0.7rem", color: "#666", fontWeight: "bold" }}>REF: NPR {(prod.price * (req.quantity || 1)).toLocaleString()}</span>;
+                            }
+                            return null;
+                          })()}
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", background: "#f0fdf4", padding: "0.5rem", borderRadius: "4px", border: "1px solid #16a34a" }}>
+                            <input
+                              type="number"
+                            placeholder="Refund Amt (Rs.)"
+                            value={tempRefundAmt}
+                            onChange={(e) => setTempRefundAmt(e.target.value)}
+                            style={{ width: "120px", padding: "0.4rem", border: "1px solid #16a34a", borderRadius: "2px" }}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleApproveReturn(req)}
+                            disabled={retLoading}
+                            style={{ background: "#16a34a", color: "white", border: "none", padding: "0.4rem 0.8rem", fontWeight: "bold", cursor: "pointer", borderRadius: "2px", fontSize: "0.8rem" }}
+                          >
+                            {retLoading ? "..." : "CONFIRM"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setApprovingReqId(null); setTempRefundAmt(""); }}
+                            style={{ background: "transparent", color: "#666", border: "none", padding: "0.4rem", cursor: "pointer", fontSize: "1.2rem", lineHeight: 1 }}
+                            title="Cancel"
+                          >
+                            ×
+                          </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setApprovingReqId(req.id);
+                            }}
+                            disabled={retLoading}
+                            style={{
+                              background: "#16a34a", color: "white", border: "none",
+                              padding: "0.6rem 1.2rem", fontWeight: "bold",
+                              cursor: retLoading ? "not-allowed" : "pointer",
+                              borderRadius: "4px"
+                            }}
+                          >
+                            APPROVE
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleRejectReturn(req.id);
+                            }}
+                            disabled={retLoading}
+                            style={{
+                              background: "transparent", color: "#dc2626", border: "1px solid #dc2626",
+                              padding: "0.6rem 1.2rem", fontWeight: "bold",
+                              cursor: retLoading ? "not-allowed" : "pointer",
+                              borderRadius: "4px"
+                            }}
+                          >
+                            REJECT
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -583,16 +709,16 @@ export default function AccountDashboard() {
           <div style={{ background: "#fff5f5", border: "2px solid #dc2626", padding: "2rem", borderRadius: "4px", marginBottom: "2rem" }}>
             <h2 style={{ color: "#dc2626", borderBottom: "1px solid #fca5a5", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>↩ Customer Return / Refund</h2>
             <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
-              Select the returned product. This will <strong>restock the inventory</strong> and <strong>log the refund money as Income</strong> in your ledger — all in one step.
+              Select the returned product. This will <strong>restock the inventory</strong> and <strong>log the refund as an Expense</strong> in your ledger — making your balance sheet more accurate.
             </p>
             <form onSubmit={handleReturn} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              
+
               <div>
                 <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Product Returned</label>
-                <select 
-                  value={retProductId} 
-                  onChange={e => setRetProductId(e.target.value)} 
-                  required 
+                <select
+                  value={retProductId}
+                  onChange={e => setRetProductId(e.target.value)}
+                  required
                   style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem" }}
                 >
                   <option value="">— Select Product —</option>
@@ -607,51 +733,65 @@ export default function AccountDashboard() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Quantity Returned</label>
-                  <input 
+                  <input
                     type="number" min="1"
-                    value={retQty} 
-                    onChange={e => setRetQty(e.target.value)} 
-                    required 
-                    style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }} 
+                    value={retQty}
+                    onChange={e => setRetQty(e.target.value)}
+                    required
+                    style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }}
                   />
                 </div>
                 <div>
                   <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Refund Amount (Rs.)</label>
-                  <input 
+                  <input
                     type="number" min="0"
-                    value={retAmount} 
-                    onChange={e => setRetAmount(e.target.value)} 
+                    value={retAmount}
+                    onChange={e => setRetAmount(e.target.value)}
                     required placeholder="0"
-                    style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }} 
+                    style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }}
                   />
                 </div>
               </div>
 
               <div>
                 <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Note (optional)</label>
-                <input 
+                <input
                   type="text"
-                  value={retNote} 
-                  onChange={e => setRetNote(e.target.value)} 
-                  placeholder="e.g. Wrong size, defect, customer changed mind..."
-                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }} 
+                  value={retNote}
+                  onChange={e => setRetNote(e.target.value)}
+                  placeholder="e.g. Wrong size, defect..."
+                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }}
                 />
               </div>
 
+              <div style={{ border: "1px dashed #dc2626", padding: "1rem", borderRadius: "4px", background: "#fef2f2" }}>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem", color: "#dc2626" }}>Cleanup Order History (Optional)</label>
+                <input
+                  type="text"
+                  value={cleanupPhone}
+                  onChange={e => setCleanupPhone(e.target.value)}
+                  placeholder="Enter Customer Phone to delete their order record"
+                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #dc2626", fontSize: "0.95rem", boxSizing: "border-box" }}
+                />
+                <p style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.4rem" }}>
+                  💡 Use this to remove the original "Income" from your Daybook so the balance matches.
+                </p>
+              </div>
+
               {retProductId && (
-                <div style={{ background: "#f0fdf4", border: "1px solid #86efac", padding: "1rem", borderRadius: "4px", fontSize: "0.85rem" }}>
-                  <strong>Preview:</strong><br/>
-                  📦 Restock: <em>{products.find((p: any) => p.id.toString() === retProductId)?.name}</em> +{retQty} units<br/>
-                  💵 Log Income: Rs. {retAmount || "0"} as "Refund Received"
+                <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", padding: "1rem", borderRadius: "4px", fontSize: "0.85rem" }}>
+                  <strong>Preview:</strong><br />
+                  📦 Restock: <em>{products.find((p: any) => p.id.toString() === retProductId)?.name}</em> +{retQty} units<br />
+                  💸 Log Expense: Rs. {retAmount || "0"} as "Refund Paid"
                 </div>
               )}
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={retLoading}
-                style={{ 
-                  padding: "1rem", background: retLoading ? "#ccc" : "#dc2626", 
-                  color: "white", border: "none", fontWeight: "bold", 
+                style={{
+                  padding: "1rem", background: retLoading ? "#ccc" : "#dc2626",
+                  color: "white", border: "none", fontWeight: "bold",
                   fontSize: "1rem", cursor: retLoading ? "not-allowed" : "pointer",
                   letterSpacing: "0.05em"
                 }}

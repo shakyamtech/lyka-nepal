@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import "../globals.css";
 
 function ReceiptContent() {
@@ -13,10 +13,51 @@ function ReceiptContent() {
 
   const [dateStr, setDateStr] = useState("");
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
+  const [orderData, setOrderData] = useState<any>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return audioCtxRef.current;
+  };
+
+  const playSweetDing = () => {
+    try {
+      const ctx = initAudio();
+      const playNote = (freq: number, startTime: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.4, startTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+      const now = ctx.currentTime;
+      playNote(523.25, now, 0.4); 
+      playNote(659.25, now + 0.15, 0.4); 
+      playNote(783.99, now + 0.3, 0.6); 
+    } catch (e) { }
+  };
 
   useEffect(() => {
     setDateStr(new Date().toLocaleDateString());
-  }, []);
+    if (orderId) {
+      fetch(`/api/orders/check?id=${orderId}`)
+        .then(res => res.json())
+        .then(data => {
+          setOrderData(data);
+          playSweetDing();
+        })
+        .catch(() => {});
+    }
+  }, [orderId]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -26,6 +67,7 @@ function ReceiptContent() {
           const res = await fetch(`/api/orders/check?id=${orderId}`);
           if (res.ok) {
             const data = await res.json();
+            setOrderData(data);
             if (data.status === 'Verified' || data.status === 'Rejected') {
               setLiveStatus(data.status);
             }
@@ -38,7 +80,7 @@ function ReceiptContent() {
 
   let displayStatus = liveStatus;
   if (!displayStatus) {
-    displayStatus = isPending ? "Pending Verification" : "Verified";
+    displayStatus = isPending ? "Pending Verification" : (orderData?.status || "Verified");
   }
 
   return (
@@ -67,12 +109,28 @@ function ReceiptContent() {
 
       <h1 className="only-print" style={{ display: "none", fontSize: "2rem", marginBottom: "1rem" }}>LYKA Nepal Receipt</h1>
       
-      <div className="receipt-box" style={{ background: "#f9fafb", border: "1px solid #e2e8f0", padding: "2rem", borderRadius: "8px", display: "inline-block", textAlign: "left", marginBottom: "3rem", minWidth: "350px" }}>
+      <div className="receipt-box" style={{ background: "#f9fafb", border: "1px solid #e2e8f0", padding: "2rem", borderRadius: "8px", display: "inline-block", textAlign: "left", marginBottom: "3rem", minWidth: "400px" }}>
         <h3 style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "1rem", marginBottom: "1rem" }}>Order summary</h3>
         <p><strong>Order ID:</strong> {orderId || "TEST-ORDER-123"}</p>
         <p><strong>Date:</strong> {dateStr}</p>
         <p><strong>Total:</strong> NPR {total || "0"}</p>
-        <p><strong>Status:</strong> <span style={{ color: displayStatus === 'Rejected' ? '#ef4444' : displayStatus === 'Verified' ? '#16a34a' : '#b45309', fontWeight: 'bold' }}>{displayStatus === 'Verified' ? "Paid & Verified" : displayStatus}</span></p>
+        <p><strong>Status:</strong> <span style={{ color: displayStatus === 'Rejected' ? '#ef4444' : displayStatus === 'Verified' ? '#16a34a' : '#b45309', fontWeight: 'bold' }}>{displayStatus === 'Verified' || displayStatus === 'Paid & Verified' ? "Paid & Verified" : displayStatus}</span></p>
+        
+        {orderData?.items && (
+          <div style={{ marginTop: "1.5rem", borderTop: "1px solid #e2e8f0", paddingTop: "1rem" }}>
+            <p style={{ fontSize: "0.8rem", fontWeight: "bold", textTransform: "uppercase", color: "#666", marginBottom: "0.5rem" }}>Items Bought:</p>
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {(orderData.items as any[]).map((item, i) => (
+                <li key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem", fontSize: "0.9rem" }}>
+                  <span>{item.name} {item.selectedSize ? `(${item.selectedSize})` : ""}</span>
+                </li>
+              ))}
+            </ul>
+            <p style={{ fontSize: "0.75rem", color: "#666", fontStyle: "italic", marginTop: "1rem" }}>
+              Something not right? Visit our <Link href={`/request-return?orderId=${orderId}`} style={{ color: "#2563eb", textDecoration: "underline" }}>Returns & Exchanges</Link> page.
+            </p>
+          </div>
+        )}
         <br/>
         <p style={{ fontSize: "0.85rem", color: "#666", borderTop: "1px solid #e2e8f0", paddingTop: "1rem" }}>LYKA Nepal - Imadole, Lalitpur<br/>shop@lykanepal.com | +977 1234567890</p>
       </div>

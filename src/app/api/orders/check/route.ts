@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
     const { data: order, error } = await supabaseAdmin
       .from('orders')
-      .select('status')
+      .select('*')
       .eq('id', orderId)
       .single();
 
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ status: 'Not Found' }, { status: 404 });
     }
     
-    return NextResponse.json({ status: order.status || 'Pending Verification' }, { status: 200 });
+    return NextResponse.json(order, { status: 200 });
   } catch (error) {
     console.error("Check order status err:", error);
     return NextResponse.json({ error: 'Failed to fetch status' }, { status: 500 });

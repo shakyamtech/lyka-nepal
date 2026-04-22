@@ -110,12 +110,13 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { id, stock, cost } = await request.json();
+    const { id, stock, cost, sizes } = await request.json();
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
     const updates: any = {};
     if (stock !== undefined) updates.stock = Number(stock);
     if (cost !== undefined) updates.cost = Number(cost);
+    if (sizes !== undefined) updates.sizes = sizes;
 
     const { data, error } = await supabaseAdmin
       .from('products')

@@ -5,6 +5,13 @@ import "./admin.css";
 
 function AnalyticsSection({ orders, products }: { orders: any[], products: any[] }) {
   const [filterItemId, setFilterItemId] = useState<string>("ALL");
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) return null;
 
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -136,8 +143,34 @@ export default function AdminPage() {
   const [stock, setStock] = useState("10");
   const [description, setDescription] = useState("");
   const [sizeQuantities, setSizeQuantities] = useState<{ [key: string]: string }>({});
+  const [refillingProduct, setRefillingProduct] = useState<any | null>(null);
+  const [refillSizes, setRefillSizes] = useState<{ [key: string]: string }>({});
+  const [topSellersRange, setTopSellersRange] = useState("ALL");
+  const [isMounted, setIsMounted] = useState(false);
+  const [printingOrders, setPrintingOrders] = useState<any[]>([]);
   const [isVerifying, setIsVerifying] = useState<string | null>(null); // orderId being verified
-  const lastSoundTimeRef = useRef<number>(0);
+
+  const handlePrintIndividual = (order: any) => {
+    setPrintingOrders([order]);
+    setTimeout(() => {
+      window.print();
+      setPrintingOrders([]);
+    }, 500);
+  };
+
+  const handlePrintAll = () => {
+    // Filter currently showing orders that are Verified
+    const verifiedOrders = orders.filter(o => o.status === 'Verified');
+    if (verifiedOrders.length === 0) {
+      alert("No verified orders to print.");
+      return;
+    }
+    setPrintingOrders(verifiedOrders);
+    setTimeout(() => {
+      window.print();
+      setPrintingOrders([]);
+    }, 500);
+  };
 
   // New User Form State
   const [newEmail, setNewEmail] = useState("");
@@ -147,48 +180,13 @@ export default function AdminPage() {
 
   // Notification State
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const lastCheckRef = useRef(Date.now());
   const playedSoundsRef = useRef<Set<number>>(new Set());
 
-  // Web Audio Generators
-  const playSimpleDing = () => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
-    } catch (e) { }
-  };
-
-  const playSweetDing = () => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const playNote = (freq: number, startTime: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(1, startTime + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-        osc.start(startTime);
-        osc.stop(startTime + duration);
-      };
-
-      const now = ctx.currentTime;
-      playNote(523.25, now, 0.4); // C
-      playNote(659.25, now + 0.15, 0.4); // E
-      playNote(783.99, now + 0.3, 0.6); // G
-    } catch (e) { }
-  };
-
   // Polling Effect
   useEffect(() => {
+    setIsMounted(true);
     if (!currentUser) return;
 
     const interval = setInterval(async () => {
@@ -200,13 +198,9 @@ export default function AdminPage() {
           lastCheckRef.current = Date.now();
           data.forEach((n: any) => {
             const now = Date.now();
-            if (!playedSoundsRef.current.has(n.timestamp) && (now - lastSoundTimeRef.current > 1000)) {
-              if (n.type === 'CART_ADD') playSimpleDing();
-              if (n.type === 'PURCHASE') playSweetDing();
-              playedSoundsRef.current.add(n.timestamp);
-              lastSoundTimeRef.current = now;
-            }
+            playedSoundsRef.current.add(n.timestamp);
             setNotifications(prev => [n, ...prev].slice(0, 5));
+            setUnreadCount(prev => prev + 1);
           });
         }
       } catch (e) { }
@@ -269,6 +263,7 @@ export default function AdminPage() {
 
   // Handlers
   const handleVerifyOrder = async (orderId: string, action: 'VERIFY' | 'REJECT') => {
+    console.log(`Triggering ${action} for ${orderId}`);
     if (!confirm(`Are you sure you want to ${action} this order?`)) return;
     setIsVerifying(orderId);
     try {
@@ -279,6 +274,19 @@ export default function AdminPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         alert(`Order ${orderId} has been successfully ${action.toLowerCase()}ed.`);
+        
+        // Log notification for Reject so staff hears the sad sound
+        if (action === 'REJECT') {
+          await fetch("/api/notifications", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              timestamp: Date.now(),
+              type: 'REJECT',
+              message: `Admin rejected order ${orderId}.`
+            })
+          });
+        }
+        
         fetchOrders(); fetchProducts();
       } else {
         alert("Verification failed: " + (data.error || "Unknown error"));
@@ -333,23 +341,50 @@ export default function AdminPage() {
     fetchProducts();
   };
 
-  const handleUpdateStock = async (id: number, currentStock: number) => {
-    const newStockStr = prompt(`Update stock for this item. Current stock: ${currentStock}`, currentStock.toString());
-    if (newStockStr === null) return; // User cancelled
+  const handleUpdateStock = (product: any) => {
+    setRefillingProduct(product);
+    const sizes: { [key: string]: string } = {};
+    if (product.sizes) {
+      product.sizes.split(',').forEach((s: string) => {
+        const [name, qty] = s.trim().split(':');
+        if (name) sizes[name] = qty || "0";
+      });
+    }
+    setRefillSizes(sizes);
+  };
 
-    const newStock = parseInt(newStockStr);
-    if (isNaN(newStock) || newStock < 0) {
-      alert("Please enter a valid positive number.");
-      return;
+  const handleSaveRefill = async () => {
+    if (!refillingProduct) return;
+    
+    let finalSizes = "";
+    let finalStock = refillingProduct.stock;
+
+    if (['Clothes', 'Shoes'].includes(refillingProduct.category)) {
+      finalSizes = Object.entries(refillSizes).map(([sz, qty]) => `${sz}:${qty}`).join(', ');
+      finalStock = Object.values(refillSizes).reduce((sum, qty) => sum + Number(qty || 0), 0);
+    } else {
+      const newStockStr = prompt(`Update stock for ${refillingProduct.name}:`, refillingProduct.stock.toString());
+      if (newStockStr === null) return;
+      finalStock = Number(newStockStr);
+      if (isNaN(finalStock)) return alert("Invalid stock number");
+    }
+
+    if (Math.abs(Number(finalStock) - Number(refillingProduct.stock)) > 100) {
+      if (!window.confirm(`⚠️ Large stock change detected: from ${refillingProduct.stock} to ${finalStock}. Is this correct?`)) return;
     }
 
     const res = await fetch(`/api/products`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, stock: newStock })
+      body: JSON.stringify({ 
+        id: refillingProduct.id, 
+        stock: finalStock,
+        sizes: finalSizes 
+      })
     });
 
     if (res.ok) {
+      setRefillingProduct(null);
       fetchProducts();
     } else {
       alert("Failed to update stock.");
@@ -453,7 +488,43 @@ export default function AdminPage() {
 
   // Render Dashboard
   const lowStockItems = products.filter(p => typeof p.stock === 'number' && p.stock < 3);
-  const topSellers = [...products].sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0)).slice(0, 3);
+  
+  const getDynamicTopSellers = () => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const verifiedOrders = orders.filter(o => o.status === 'Verified' || o.status === 'Paid & Verified' || !o.status);
+    
+    const filteredOrders = verifiedOrders.filter(o => {
+      const orderDate = new Date(o.date);
+      if (topSellersRange === "TODAY") return orderDate >= startOfToday;
+      if (topSellersRange === "MONTH") return orderDate >= startOfMonth;
+      return true; // ALL
+    });
+
+    const itemCounts: { [key: string]: { id: string, name: string, count: number } } = {};
+    filteredOrders.forEach(o => {
+      const orderItems = o.rawItems || o.items || [];
+      if (Array.isArray(orderItems)) {
+        orderItems.forEach((item: any) => {
+          const id = item.id?.toString() || item.name;
+          if (!itemCounts[id]) {
+            itemCounts[id] = { id, name: item.name, count: 0 };
+          }
+          itemCounts[id].count += Number(item.quantity || 1);
+        });
+      }
+    });
+
+    return Object.values(itemCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  };
+
+  const dynamicTopSellers = getDynamicTopSellers();
+
+  if (!isMounted) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading LYKA Admin Suite...</div>;
 
   return (
     <div className="admin-dashboard container">
@@ -476,17 +547,33 @@ export default function AdminPage() {
       <AnalyticsSection orders={orders} products={products} />
 
       <div style={{ marginBottom: "3rem" }}>
-        <h2>Top Selling Items</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h2>Top Selling Items</h2>
+          <select
+            value={topSellersRange}
+            onChange={e => setTopSellersRange(e.target.value)}
+            style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--border)", fontFamily: "inherit" }}
+          >
+            <option value="ALL">All Time</option>
+            <option value="MONTH">This Month</option>
+            <option value="TODAY">Today</option>
+          </select>
+        </div>
+        
         <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
-          {topSellers.map((item, index) => (
-            <div key={item.id} style={{ background: "white", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", flex: "1 1 250px", display: "flex", alignItems: "center" }}>
-              <h1 style={{ fontSize: "2.5rem", color: "var(--primary)", marginRight: "1rem" }}>#{index + 1}</h1>
-              <div>
-                <h4>{item.name}</h4>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{item.salesCount || 0} units sold</p>
+          {dynamicTopSellers.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", fontStyle: "italic" }}>No sales recorded for this period.</p>
+          ) : (
+            dynamicTopSellers.map((item, index) => (
+              <div key={item.id} style={{ background: "white", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", flex: "1 1 250px", display: "flex", alignItems: "center" }}>
+                <h1 style={{ fontSize: "2.5rem", color: "var(--primary)", marginRight: "1rem" }}>#{index + 1}</h1>
+                <div>
+                  <h4>{item.name}</h4>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{item.count} units sold</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
@@ -592,8 +679,29 @@ export default function AdminPage() {
           <h2>Manage Inventory</h2>
 
           {notifications.length > 0 && (
-            <div style={{ background: "#e0f2fe", padding: "1rem", borderRadius: "8px", marginBottom: "2rem", border: "1px solid #bae6fd" }}>
-              <h3 style={{ fontSize: "1rem", color: "#0369a1", marginBottom: "0.5rem" }}>Live Notifications</h3>
+            <div 
+              style={{ background: "#e0f2fe", padding: "1rem", borderRadius: "8px", marginBottom: "2rem", border: "1px solid #bae6fd", position: "relative" }}
+              onClick={() => setUnreadCount(0)}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                <h3 style={{ fontSize: "1rem", color: "#0369a1", margin: 0 }}>
+                  Live Notifications
+                  {unreadCount > 0 && (
+                    <span style={{ 
+                      marginLeft: "8px", 
+                      background: "#ef4444", 
+                      color: "white", 
+                      borderRadius: "50%", 
+                      padding: "2px 8px", 
+                      fontSize: "0.75rem",
+                      verticalAlign: "middle"
+                    }}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </h3>
+                {unreadCount > 0 && <span style={{ fontSize: "0.75rem", color: "#0369a1", fontWeight: "600" }}>(Click to clear)</span>}
+              </div>
               {notifications.map((n, i) => (
                 <div key={i} style={{ fontSize: "0.9rem", padding: "0.5rem 0", borderBottom: i !== notifications.length - 1 ? "1px solid #bae6fd" : "none" }}>
                   <strong>{new Date(n.timestamp).toLocaleTimeString()}:</strong> {n.message}
@@ -612,12 +720,58 @@ export default function AdminPage() {
                   {p.sizes && <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>Sizes: {p.sizes}</p>}
                 </div>
                 <div>
-                  <button className="edit-btn" onClick={() => handleUpdateStock(p.id, p.stock)}>Refill Stock</button>
+                  <button className="edit-btn" onClick={() => handleUpdateStock(p)}>Refill Stock</button>
                   <button className="delete-btn" onClick={() => handleDelete(p.id)}>Delete</button>
                 </div>
               </div>
             ))}
           </div>
+
+          {refillingProduct && (
+            <div style={{ 
+              position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
+              background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", 
+              alignItems: "center", zIndex: 1000 
+            }}>
+              <div style={{ background: "white", padding: "2rem", borderRadius: "8px", maxWidth: "500px", width: "90%" }}>
+                <h3>Refill Stock: {refillingProduct.name}</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "1.5rem" }}>Update stock for each size below.</p>
+                
+                {['Clothes', 'Shoes'].includes(refillingProduct.category) ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+                    {Object.keys(refillSizes).sort().map(sz => (
+                      <div key={sz} style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                        <label style={{ fontSize: "0.85rem", fontWeight: "600" }}>{sz}</label>
+                        <input 
+                          type="number" 
+                          value={refillSizes[sz]} 
+                          onChange={e => setRefillSizes(prev => ({ ...prev, [sz]: e.target.value }))}
+                          style={{ padding: "0.5rem", border: "1px solid var(--border)", borderRadius: "4px" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>Stock will be updated via prompt.</p>
+                )}
+
+                <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+                  <button 
+                    onClick={() => setRefillingProduct(null)}
+                    style={{ padding: "0.8rem 1.5rem", background: "#f1f5f9", border: "none", borderRadius: "4px", cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleSaveRefill}
+                    style={{ padding: "0.8rem 1.5rem", background: "var(--primary)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "600" }}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       </div>
 
@@ -626,22 +780,92 @@ export default function AdminPage() {
         <h2>Customer Orders & Payments</h2>
         <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Review uploaded payment screenshots and verify orders to deduct inventory stock.</p>
 
-        <div style={{ marginBottom: "2rem", display: "flex", gap: "1rem" }}>
-          <input
-            type="text"
-            placeholder="Search by ID, Name, or Email..."
-            value={orderSearchTerm}
-            onChange={(e) => setOrderSearchTerm(e.target.value)}
-            style={{ flex: 1, padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "8px" }}
-          />
-          {orderSearchTerm && (
-            <button
-              onClick={() => setOrderSearchTerm("")}
-              style={{ padding: "0.8rem 1.5rem", background: "#e5e7eb", border: "none", borderRadius: "8px", cursor: "pointer" }}
-            >
-              Clear
-            </button>
-          )}
+        <div style={{ marginBottom: "2rem", display: "flex", gap: "1rem", alignItems: "center" }}>
+          <div style={{ flex: 1, display: "flex", gap: "1rem" }}>
+            <input
+              type="text"
+              placeholder="Search by ID, Name, or Email..."
+              value={orderSearchTerm}
+              onChange={(e) => setOrderSearchTerm(e.target.value)}
+              style={{ flex: 1, padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "8px" }}
+            />
+            {orderSearchTerm && (
+              <button
+                onClick={() => setOrderSearchTerm("")}
+                style={{ padding: "0.8rem 1.5rem", background: "#e5e7eb", border: "none", borderRadius: "8px", cursor: "pointer" }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <button 
+            onClick={handlePrintAll}
+            style={{ padding: "0.8rem 1.5rem", background: "#6366f1", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}
+          >
+            🖨️ Print All Verified
+          </button>
+        </div>
+
+        {/* HIDDEN PRINTABLE SECTION */}
+        <div className="printable-bill">
+          {printingOrders.map((order, idx) => (
+            <div key={order.id} className="bill-page">
+              <div className="bill-header">
+                <h1 style={{ margin: 0, fontSize: "2rem" }}>LYKA NEPAL</h1>
+                <p style={{ margin: "5px 0" }}>Imadole, Lalitpur, Nepal | Phone: 9800000000</p>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", textAlign: "left" }}>
+                  <div>
+                    <h2 style={{ margin: 0 }}>INVOICE</h2>
+                    <p>Order ID: <strong>{order.id}</strong></p>
+                    <p>Date: {new Date(order.date).toLocaleDateString()}</p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p>Status: <strong>{order.status}</strong></p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bill-section">
+                <h3>Customer Details:</h3>
+                <p>Name: <strong>{order.name}</strong></p>
+                <p>Phone: {order.phone}</p>
+                <p>Address: {order.address}</p>
+              </div>
+
+              <div className="bill-section">
+                <h3>Order Items:</h3>
+                <table className="bill-table">
+                  <thead>
+                    <tr>
+                      <th>Product Name</th>
+                      <th>Quantity</th>
+                      <th>Price</th>
+                      <th>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(order.rawItems || order.items || []).map((item: any, i: number) => (
+                      <tr key={i}>
+                        <td>{item.name}</td>
+                        <td>{item.quantity || 1}</td>
+                        <td>NPR {item.price}</td>
+                        <td>NPR {Number(item.price) * Number(item.quantity || 1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="bill-total">
+                Grand Total: NPR {order.total}
+              </div>
+
+              <div style={{ marginTop: "50px", textAlign: "center", borderTop: "1px solid #ccc", paddingTop: "20px" }}>
+                <p>Thank you for shopping with LYKA NEPAL!</p>
+                <p style={{ fontSize: "0.8rem" }}>This is a computer generated invoice.</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {orders.length === 0 ? (
@@ -679,18 +903,41 @@ export default function AdminPage() {
                       <p><strong>Total:</strong> NPR {order.total}</p>
 
                       <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                        {order.status === 'Verified' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handlePrintIndividual(order);
+                            }}
+                            style={{ padding: "0.5rem 1rem", background: "#4f46e5", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
+                          >
+                            🖨️ Print Bill
+                          </button>
+                        )}
                         {(!order.status || order.status === 'Pending Verification') && (
                           <>
                             <button
+                              type="button"
                               disabled={isVerifying === order.id}
-                              onClick={() => handleVerifyOrder(order.id, 'VERIFY')}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleVerifyOrder(order.id, 'VERIFY');
+                              }}
                               style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
                             >
                               {isVerifying === order.id ? "⌛ Verifying..." : "☑ Verify Payment"}
                             </button>
                             <button
+                              type="button"
                               disabled={isVerifying === order.id}
-                              onClick={() => handleVerifyOrder(order.id, 'REJECT')}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleVerifyOrder(order.id, 'REJECT');
+                              }}
                               style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
                             >
                               {isVerifying === order.id ? "..." : "✕ Reject"}
