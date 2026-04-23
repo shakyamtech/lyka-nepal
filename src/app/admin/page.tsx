@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import NepaliDate from "nepali-date-converter";
 import "./admin.css";
 
 function AnalyticsSection({ orders, products }: { orders: any[], products: any[] }) {
@@ -1218,7 +1219,7 @@ export default function AdminPage() {
                             <p><strong>Customer:</strong> {order.name} ({order.email})</p>
                             <p><strong>Phone:</strong> <a href={`tel:${order.phone}`} style={{ color: "var(--primary)", fontWeight: "bold" }}>{order.phone || "N/A"}</a></p>
                             <p><strong>Address:</strong> {order.address || "N/A"}</p>
-                            <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
+                            <p><strong>Date:</strong> {new Date(order.date).toLocaleString()} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
                             <p><strong>Total:</strong> NPR {order.total}</p>
 
                             <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
@@ -1448,7 +1449,7 @@ const PrintableBill = ({ printingOrders }: { printingOrders: any[] }) => {
               <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Order Reference:</p>
               <p style={{ fontWeight: 'bold', color: 'black', margin: '0' }}>#{order.id}</p>
               <p style={{ color: 'black', fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem' }}>Order Date:</p>
-              <p style={{ color: 'black', margin: '0' }}>{new Date(order.date).toLocaleString()}</p>
+              <p style={{ color: 'black', margin: '0' }}>{new Date(order.date).toLocaleString()} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
               <p style={{ color: 'black', marginTop: '0.5rem' }}><strong>Status:</strong> {order.status || 'Verified'}</p>
             </div>
           </div>

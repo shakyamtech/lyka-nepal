@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import NepaliDate from "nepali-date-converter";
 import "../admin.css";
 
 export default function AccountDashboard() {
@@ -458,7 +459,7 @@ export default function AccountDashboard() {
                     <>
                       <div>
                         <strong>{e.type === "INCOME" ? "➕ " : ""}{e.category}</strong>
-                        <div style={{ fontSize: "0.8rem", color: "gray" }}>{e.description} • {new Date(e.date).toLocaleDateString()}</div>
+                        <div style={{ fontSize: "0.8rem", color: "gray" }}>{e.description} • {new Date(e.date).toLocaleDateString()} ({new NepaliDate(new Date(e.date)).format('DD MMMM YYYY')} BS)</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                         <div style={{ color: e.type === "INCOME" ? "green" : "red", fontWeight: "bold", marginRight: "1rem" }}>
@@ -530,7 +531,7 @@ export default function AccountDashboard() {
                   return (
                     <tr key={i} style={{ borderBottom: "1px solid var(--admin-border)", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
                       <td style={{ padding: "0.7rem 1rem" }}>{o.customerName || "—"}</td>
-                      <td style={{ padding: "0.7rem 1rem", color: "#666" }}>{o.date ? new Date(o.date).toLocaleDateString() : "—"}</td>
+                      <td style={{ padding: "0.7rem 1rem", color: "#666" }}>{o.date ? `${new Date(o.date).toLocaleDateString()} (${new NepaliDate(new Date(o.date)).format('DD MMMM YYYY')} BS)` : "—"}</td>
                       <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {revenue.toLocaleString()}</td>
                       <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "red" }}>Rs. {cogs.toLocaleString()}</td>
                       <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "green" : "red" }}>
@@ -646,7 +647,7 @@ export default function AccountDashboard() {
                       <div style={{ display: "flex", gap: "1rem", alignItems: "baseline", marginBottom: "0.5rem" }}>
                         <span style={{ fontWeight: "800", fontSize: "1.1rem" }}>{req.customer_name}</span>
                         <span style={{ color: "var(--admin-text-muted)", fontSize: "0.85rem" }}>{req.customer_phone}</span>
-                        <span style={{ color: "var(--admin-text-muted)", fontSize: "0.8rem", opacity: 0.7 }}>{new Date(req.created_at).toLocaleDateString()}</span>
+                        <span style={{ color: "var(--admin-text-muted)", fontSize: "0.8rem", opacity: 0.7 }}>{new Date(req.created_at).toLocaleDateString()} ({new NepaliDate(new Date(req.created_at)).format('DD MMMM YYYY')} BS)</span>
                       </div>
                       <div style={{ marginBottom: "0.5rem" }}>
                         <strong style={{ color: "#ef4444" }}>Product: </strong>

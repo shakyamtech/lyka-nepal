@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState, useEffect, useRef } from "react";
+import NepaliDate from "nepali-date-converter";
 import "../globals.css";
 
 function ReceiptContent() {
@@ -47,7 +48,8 @@ function ReceiptContent() {
   };
 
   useEffect(() => {
-    setDateStr(new Date().toLocaleDateString());
+    const adDate = new Date();
+    setDateStr(`${adDate.toLocaleDateString()} (${new NepaliDate(adDate).format('DD MMMM YYYY')} BS)`);
     if (orderId) {
       fetch(`/api/orders/check?id=${orderId}`)
         .then(res => res.json())
