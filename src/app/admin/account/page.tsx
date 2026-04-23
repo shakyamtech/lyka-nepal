@@ -542,7 +542,14 @@ export default function AccountDashboard() {
                   )}
                 </div>
               )}
-              <input type="text" placeholder="Description (e.g., Cash from walk-in customer)" value={expDesc} onChange={e => setExpDesc(e.target.value)} required style={{ padding: "0.8rem" }} />
+              <input 
+                type="text" 
+                placeholder={expType === "INCOME" ? "Description (e.g., Cash from walk-in customer)" : "Description (e.g., Staff salary, Rent, Ad spend)"} 
+                value={expDesc} 
+                onChange={e => setExpDesc(e.target.value)} 
+                required 
+                style={{ padding: "0.8rem", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }} 
+              />
                <div style={{ position: "relative" }}>
                  <input 
                    type="number" 
