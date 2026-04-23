@@ -174,9 +174,10 @@
   background: #94a3b8;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .admin-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
   
   .admin-dashboard {
@@ -418,13 +419,13 @@ section[style*="background: white"], div[style*="background: white"] {
   color: var(--admin-text-muted) !important;
 }
 
-/* Global Text Visibility for Dark Mode */
-.dark-theme h1, .dark-theme h2, .dark-theme h3, .dark-theme h4, .dark-theme h5, .dark-theme h6,
-.dark-theme span, .dark-theme strong, .dark-theme label, .dark-theme div, .dark-theme p:not(.admin-text-muted) {
+/* Global Text Visibility for Dark Mode - Scoped to Admin only */
+.admin-body.dark-theme h1, .admin-body.dark-theme h2, .admin-body.dark-theme h3, .admin-body.dark-theme h4, .admin-body.dark-theme h5, .admin-body.dark-theme h6,
+.admin-body.dark-theme span, .admin-body.dark-theme strong, .admin-body.dark-theme label, .admin-body.dark-theme div, .admin-body.dark-theme p:not(.admin-text-muted) {
   color: var(--admin-text) !important;
 }
 
-.dark-theme .admin-text-muted, .dark-theme p, .dark-theme a:not([button]) {
+.admin-body.dark-theme .admin-text-muted, .admin-body.dark-theme p, .admin-body.dark-theme a:not([button]) {
   color: var(--admin-text-muted) !important;
 }
 
@@ -438,13 +439,13 @@ section[style*="background: white"], div[style*="background: white"] {
 }
 
 /* Ensure inputs and placeholders are handled */
-.dark-theme input, .dark-theme select, .dark-theme textarea {
+.admin-body.dark-theme input, .admin-body.dark-theme select, .admin-body.dark-theme textarea {
   background: var(--admin-card) !important;
   color: var(--admin-text) !important;
   border-color: var(--admin-border) !important;
 }
 
-.dark-theme input::placeholder {
+.admin-body.dark-theme input::placeholder {
   color: var(--admin-text-muted) !important;
   opacity: 0.7;
 }
@@ -480,19 +481,80 @@ section[style*="background: white"], div[style*="background: white"] {
   .admin-layout {
     flex-direction: column;
   }
+  
   .admin-sidebar {
-    position: relative;
+    position: fixed;
+    bottom: 0;
+    top: auto;
     width: 100%;
     height: auto;
-    padding: 1rem;
+    padding: 0.5rem;
+    flex-direction: row;
+    justify-content: center;
+    border-right: none;
+    border-top: 1px solid var(--admin-border);
+    background: var(--admin-sidebar);
+    z-index: 1000;
   }
+
+  .sidebar-logo {
+    display: none;
+  }
+
   .sidebar-nav {
     flex-direction: row;
-    overflow-x: auto;
+    justify-content: space-around;
+    width: 100%;
+    overflow-x: visible;
   }
+
+  .sidebar-item {
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    gap: 0.2rem;
+    font-size: 0.7rem;
+    width: auto;
+  }
+
+  .sidebar-item span {
+    display: block;
+    font-size: 0.6rem;
+  }
+
   .admin-main-content {
     margin-left: 0;
-    padding: 1.5rem;
+    margin-bottom: 70px; /* Space for bottom nav */
+    padding: 1rem;
+    padding-top: 5rem; /* Space for weather/logout header */
+  }
+
+  /* Fix weather widget overlap */
+  header.admin-header-flex {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+    padding: 1rem !important;
+  }
+
+  .weather-card {
+    position: relative !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  h1.greeting-text {
+    font-size: 1.8rem !important;
+  }
+
+  /* Make tables scrollable on mobile */
+  .unified-sales-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 600px;
   }
 }
 

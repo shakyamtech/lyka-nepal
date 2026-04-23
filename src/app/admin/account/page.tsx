@@ -758,59 +758,61 @@ export default function AccountDashboard() {
                   </div>
                 </div>
 
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-                  <thead>
-                    <tr style={{ background: "#111", color: "white", textAlign: "left" }}>
-                      <th style={{ padding: "0.7rem 1rem" }}>Customer / Type</th>
-                      <th style={{ padding: "0.7rem 1rem" }}>Date & Details</th>
-                      <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Sale Price</th>
-                      <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Cost (COGS)</th>
-                      <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Margin</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unifiedSales.map((s, i) => {
-                      const margin = s.revenue - s.cogs;
-                      return (
-                        <tr key={i} style={{ borderBottom: "1px solid var(--admin-border)", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-                          <td style={{ padding: "0.7rem 1rem" }}>
-                            <div style={{ fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                              <span style={{ fontSize: "0.6rem", padding: "2px 5px", borderRadius: "3px", background: s.type === 'WEB' ? "#3b82f6" : "#10b981", color: "white" }}>
-                                {s.type}
-                              </span>
-                              {s.customer}
-                            </div>
-                            <div style={{ fontSize: "0.75rem", opacity: 0.7 }}>{s.contact}</div>
-                          </td>
-                          <td style={{ padding: "0.7rem 1rem", color: effectiveTheme === 'dark' ? "#94a3b8" : "#666" }}>
-                            <div style={{ fontSize: "0.85rem" }}>{s.date ? `${new Date(s.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} (${new NepaliDate(new Date(s.date)).format('DD MMMM YYYY')} BS)` : "—"}</div>
-                            <div style={{ fontSize: "0.7rem", fontStyle: "italic" }}>{s.desc}</div>
-                          </td>
-                          <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {s.revenue.toLocaleString()}</td>
-                          <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#f87171" }}>Rs. {s.cogs.toLocaleString()}</td>
-                          <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "#4ade80" : "#f87171" }}>
-                            {margin >= 0 ? "+" : ""}Rs. {margin.toLocaleString()}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {unifiedSales.length === 0 && (
-                      <tr>
-                        <td colSpan={5} style={{ padding: "3rem", textAlign: "center", color: "var(--admin-text-muted)" }}>No records found matching your search/filter.</td>
+                <div className="unified-sales-container">
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                    <thead>
+                      <tr style={{ background: "#111", color: "white", textAlign: "left" }}>
+                        <th style={{ padding: "0.7rem 1rem" }}>Customer / Type</th>
+                        <th style={{ padding: "0.7rem 1rem" }}>Date & Details</th>
+                        <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Sale Price</th>
+                        <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Cost (COGS)</th>
+                        <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Margin</th>
                       </tr>
-                    )}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ background: "#111", color: "white", fontWeight: "bold" }}>
-                      <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL (FILTERED)</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.revenue, 0).toLocaleString()}</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.cogs, 0).toLocaleString()}</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#4ade80" }}>
-                        Rs. {(unifiedSales.reduce((sum,s)=>sum+(s.revenue - s.cogs), 0)).toLocaleString()}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    </thead>
+                    <tbody>
+                      {unifiedSales.map((s, i) => {
+                        const margin = s.revenue - s.cogs;
+                        return (
+                          <tr key={i} style={{ borderBottom: "1px solid var(--admin-border)", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
+                            <td style={{ padding: "0.7rem 1rem" }}>
+                              <div style={{ fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <span style={{ fontSize: "0.6rem", padding: "2px 5px", borderRadius: "3px", background: s.type === 'WEB' ? "#3b82f6" : "#10b981", color: "white" }}>
+                                  {s.type}
+                                </span>
+                                {s.customer}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", opacity: 0.7 }}>{s.contact}</div>
+                            </td>
+                            <td style={{ padding: "0.7rem 1rem", color: effectiveTheme === 'dark' ? "#94a3b8" : "#666" }}>
+                              <div style={{ fontSize: "0.85rem" }}>{s.date ? `${new Date(s.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} (${new NepaliDate(new Date(s.date)).format('DD MMMM YYYY')} BS)` : "—"}</div>
+                              <div style={{ fontSize: "0.7rem", fontStyle: "italic" }}>{s.desc}</div>
+                            </td>
+                            <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {s.revenue.toLocaleString()}</td>
+                            <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#f87171" }}>Rs. {s.cogs.toLocaleString()}</td>
+                            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "#4ade80" : "#f87171" }}>
+                              {margin >= 0 ? "+" : ""}Rs. {margin.toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {unifiedSales.length === 0 && (
+                        <tr>
+                          <td colSpan={5} style={{ padding: "3rem", textAlign: "center", color: "var(--admin-text-muted)" }}>No records found matching your search/filter.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ background: "#111", color: "white", fontWeight: "bold" }}>
+                        <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL (FILTERED)</td>
+                        <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.revenue, 0).toLocaleString()}</td>
+                        <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.cogs, 0).toLocaleString()}</td>
+                        <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#4ade80" }}>
+                          Rs. {(unifiedSales.reduce((sum,s)=>sum+(s.revenue - s.cogs), 0)).toLocaleString()}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             );
           })()}

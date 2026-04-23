@@ -139,7 +139,7 @@ function AdminHeader({ currentUser, weather, themeMode, toggleTheme, refreshWeat
   };
 
   return (
-    <header style={{ 
+    <header className="admin-header-flex" style={{ 
       display: 'flex', 
       justifyContent: 'space-between', 
       alignItems: 'center', 
@@ -148,7 +148,7 @@ function AdminHeader({ currentUser, weather, themeMode, toggleTheme, refreshWeat
       width: '100%'
     }}>
       <div style={{ flex: 1 }}>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: '800', marginBottom: '0.4rem', color: 'var(--admin-text)', margin: 0 }}>
+        <h1 className="greeting-text" style={{ fontSize: '2.2rem', fontWeight: '800', marginBottom: '0.4rem', color: 'var(--admin-text)', margin: 0 }}>
           {hour >= 18 || hour < 6 ? '🌙' : '☀️'} Good {hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening'}, {currentUser.displayName || currentUser.email.split('@')[0]}!
         </h1>
         <p style={{ color: 'var(--admin-text-muted)', fontSize: '1rem', margin: '0.4rem 0 0 0' }}>Welcome back to your Admin Suite.</p>
