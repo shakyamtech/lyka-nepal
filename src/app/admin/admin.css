@@ -438,6 +438,14 @@ section[style*="background: white"], div[style*="background: white"] {
   text-decoration: underline;
 }
 
+.admin-phone-link {
+  color: #3b82f6 !important;
+  text-decoration: none !important;
+}
+.admin-phone-link:hover {
+  text-decoration: underline !important;
+}
+
 /* Ensure inputs and placeholders are handled */
 .admin-body.dark-theme input, .admin-body.dark-theme select, .admin-body.dark-theme textarea {
   background: var(--admin-card) !important;

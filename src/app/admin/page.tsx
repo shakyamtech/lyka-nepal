@@ -1215,7 +1215,7 @@ export default function AdminPage() {
                               </span>
                             </div>
                             <p><strong>Customer:</strong> {order.name} ({order.email})</p>
-                            <p><strong>Phone:</strong> <a href={`tel:${order.phone}`} style={{ color: "#3b82f6", fontWeight: "bold" }}>{order.phone || "N/A"}</a></p>
+                            <p><strong>Phone:</strong> <a href={`tel:${order.phone}`} className="admin-phone-link" style={{ fontWeight: "bold" }}>{order.phone || "N/A"}</a></p>
                             <p><strong>Address:</strong> {order.address || "N/A"}</p>
                             <p><strong>Date:</strong> {new Date(order.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
                             <p><strong>Total:</strong> NPR {order.total}</p>
