@@ -1132,7 +1132,7 @@ export default function AdminPage() {
           {activeTab === 'categories' && (
             <section className="manage-categories-section" style={{ padding: "2.5rem", borderRadius: "8px", maxWidth: "800px" }}>
               <h2>Manage Product Categories</h2>
-              <form onSubmit={handleAddCategory} style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem" }}>
+              <form className="order-controls" onSubmit={handleAddCategory} style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem" }}>
                 <input 
                   type="text" 
                   placeholder="New Category Name (e.g. Perfume)" 
@@ -1140,7 +1140,7 @@ export default function AdminPage() {
                   onChange={e => setNewCategoryName(e.target.value)}
                   style={{ flex: 1, padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "8px" }}
                 />
-                <button type="submit" style={{ padding: "0 2rem", borderRadius: '8px' }}>Add Category</button>
+                <button type="submit" className="print-all-btn" style={{ padding: "0 2rem", borderRadius: '8px' }}>Add Category</button>
               </form>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem" }}>
                 {categories.map(cat => (
