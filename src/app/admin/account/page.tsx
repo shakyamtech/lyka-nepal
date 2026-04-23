@@ -473,8 +473,22 @@ export default function AccountDashboard() {
                 </div>
               )}
               <input type="text" placeholder="Description (e.g., Cash from walk-in customer)" value={expDesc} onChange={e => setExpDesc(e.target.value)} required style={{ padding: "0.8rem" }} />
-              <input type="number" placeholder="Amount (NPR)" value={expAmount} onChange={e => setExpAmount(e.target.value)} required style={{ padding: "0.8rem" }} />
-              <button type="submit" style={{ background: "black", color: "white", padding: "1rem", fontWeight: "bold", cursor: "pointer", border: "none" }}>SAVE ENTRY</button>
+               <div style={{ position: "relative" }}>
+                 <input 
+                   type="number" 
+                   placeholder="Amount (NPR)" 
+                   value={expAmount} 
+                   onChange={e => setExpAmount(e.target.value)} 
+                   required 
+                   style={{ padding: "0.8rem", width: "100%" }} 
+                 />
+                 {offlineProductId && (
+                   <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "4px", fontStyle: "italic" }}>
+                     Retail Price: Rs. {products.find(p => p.id.toString() === offlineProductId)?.price.toLocaleString()} per unit
+                   </div>
+                 )}
+               </div>
+               <button type="submit" style={{ background: "black", color: "white", padding: "1rem", fontWeight: "bold", cursor: "pointer", border: "none" }}>SAVE ENTRY</button>
             </form>
 
             <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid var(--admin-border)", background: "var(--admin-card)", color: "var(--admin-text)", borderRadius: "8px" }}>
