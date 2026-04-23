@@ -245,7 +245,7 @@ export default function AccountDashboard() {
           const qtyNum = Number(offlineQty);
           let newStock = Number(product.stock);
 
-          if (expCategory === "Offline Sale") {
+          if (expCategory === "Offline Sale" || expCategory === "Inventory Damage / Loss") {
             if (product.stock < qtyNum) {
               alert(`⚠️ Out of Stock! Only ${product.stock} units remaining.`);
               return;
@@ -254,12 +254,10 @@ export default function AccountDashboard() {
           } else if (expCategory === "Refund Paid") {
             if (shouldUpdateStock) {
               newStock += qtyNum; // Add back to stock
-            } else {
-              // Damaged item, do not update newStock (keep it same as old)
             }
           }
 
-          if (shouldUpdateStock || expCategory === "Offline Sale") {
+          if (shouldUpdateStock || expCategory === "Offline Sale" || expCategory === "Inventory Damage / Loss") {
             const stockRes = await fetch("/api/products", {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
@@ -277,8 +275,8 @@ export default function AccountDashboard() {
         body: JSON.stringify({ 
           type: expType, 
           category: expCategory, 
-          description: (expCategory === "Offline Sale" || expCategory === "Refund Paid") && offlineProductId 
-            ? `${expDesc} (x${offlineQty})${!shouldUpdateStock && expCategory === "Refund Paid" ? " [DAMAGED - NO STOCK ADDED]" : ""}` 
+          description: (expCategory === "Offline Sale" || expCategory === "Refund Paid" || expCategory === "Inventory Damage / Loss") && offlineProductId 
+            ? `${expDesc} (x${offlineQty})${!shouldUpdateStock && expCategory === "Refund Paid" ? " [DAMAGED - NO RESTOCK]" : ""}` 
             : expDesc, 
           amount: Number(expAmount) 
         })
@@ -439,6 +437,7 @@ export default function AccountDashboard() {
                     <option value="Rent">Rent & Utilities</option>
                     <option value="Misc">Miscellaneous Expense</option>
                     <option value="Refund Paid">Refund Paid (to Customer)</option>
+                    <option value="Inventory Damage / Loss">Inventory Damage / Loss</option>
                   </>
                 ) : (
                   <>
@@ -450,10 +449,14 @@ export default function AccountDashboard() {
                 )}
               </select>
 
-              {(expCategory === "Offline Sale" || expCategory === "Refund Paid") && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem", background: expCategory === "Offline Sale" ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)", border: `1px solid ${expCategory === "Offline Sale" ? "#10b981" : "#ef4444"}`, borderRadius: "8px" }}>
+              {(expCategory === "Offline Sale" || expCategory === "Refund Paid" || expCategory === "Inventory Damage / Loss") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem", 
+                  background: expCategory === "Offline Sale" ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)", 
+                  border: `1px solid ${expCategory === "Offline Sale" ? "#10b981" : "#ef4444"}`, borderRadius: "8px" }}>
                   <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: expCategory === "Offline Sale" ? "#065f46" : "#991b1b", margin: 0 }}>
-                    {expCategory === "Offline Sale" ? "📦 LINK TO PRODUCT STOCK (AUTO-DEDUCT)" : "🔄 RE-ADD TO PRODUCT STOCK (RETURN)"}
+                    {expCategory === "Offline Sale" ? "📦 LINK TO PRODUCT STOCK (AUTO-DEDUCT)" : 
+                     expCategory === "Refund Paid" ? "🔄 RE-ADD TO PRODUCT STOCK (RETURN)" :
+                     "⚠️ RECORD DAMAGE (DEDUCT FROM STOCK)"}
                   </p>
                   <select 
                     value={offlineProductId} 
@@ -461,8 +464,13 @@ export default function AccountDashboard() {
                       setOfflineProductId(e.target.value);
                       const p = products.find(prod => prod.id.toString() === e.target.value);
                       if (p) {
-                        setExpAmount(p.price.toString());
-                        setExpDesc(expCategory === "Offline Sale" ? `Offline Sale: ${p.name}` : `Refund/Return: ${p.name}`);
+                        if (expCategory === "Inventory Damage / Loss") {
+                          setExpAmount(p.cost.toString());
+                          setExpDesc(`Damage/Loss: ${p.name}`);
+                        } else {
+                          setExpAmount(p.price.toString());
+                          setExpDesc(expCategory === "Offline Sale" ? `Offline Sale: ${p.name}` : `Refund/Return: ${p.name}`);
+                        }
                       }
                     }} 
                     style={{ padding: "0.8rem", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }}
@@ -498,6 +506,11 @@ export default function AccountDashboard() {
                       <label htmlFor="update-stock-check" style={{ fontSize: "0.85rem", cursor: "pointer" }}>
                         {shouldUpdateStock ? "✅ Add back to sellable stock" : "❌ Damaged item (Do not add back to stock)"}
                       </label>
+                    </div>
+                  )}
+                  {expCategory === "Inventory Damage / Loss" && (
+                    <div style={{ fontSize: "0.8rem", color: "#991b1b", marginTop: "0.5rem", fontStyle: "italic", fontWeight: "bold" }}>
+                      ⚠️ This will permanently remove units from stock and record a capital loss.
                     </div>
                   )}
                 </div>
@@ -735,6 +748,35 @@ export default function AccountDashboard() {
               ))}
             </tbody>
           </table>
+
+          <div style={{ marginTop: "3rem" }}>
+            <h3 style={{ color: "#ef4444", borderBottom: "1px solid var(--admin-border)", paddingBottom: "0.5rem" }}>⚠️ Inventory Damage / Loss History</h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--admin-card)", border: "1px solid var(--admin-border)", marginTop: "1rem" }}>
+              <thead style={{ background: "rgba(239, 68, 68, 0.1)" }}>
+                <tr>
+                  <th style={{ padding: "0.7rem", textAlign: "left" }}>Date</th>
+                  <th style={{ padding: "0.7rem", textAlign: "left" }}>Product & Quantity</th>
+                  <th style={{ padding: "0.7rem", textAlign: "right" }}>Capital Loss (Cost Value)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses
+                  .filter(e => e.category === "Inventory Damage / Loss" || e.description.includes("[DAMAGED"))
+                  .map((e, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid var(--admin-border)" }}>
+                      <td style={{ padding: "0.7rem", fontSize: "0.85rem" }}>{new Date(e.date).toLocaleDateString()}</td>
+                      <td style={{ padding: "0.7rem" }}>{e.description}</td>
+                      <td style={{ padding: "0.7rem", textAlign: "right", color: "#ef4444", fontWeight: "bold" }}>Rs. {e.amount.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                {expenses.filter(e => e.category === "Inventory Damage / Loss" || e.description.includes("[DAMAGED")).length === 0 && (
+                  <tr>
+                    <td colSpan={3} style={{ padding: "2rem", textAlign: "center", color: "#999", fontStyle: "italic" }}>No damage records found. Stock is healthy!</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
