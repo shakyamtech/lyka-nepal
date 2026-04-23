@@ -359,9 +359,19 @@ export default function AccountDashboard() {
   const grossProfit = totalSalesRevenue - totalCOGS;
 
   const totalOtherIncome = expenses.filter(e => e.type === "INCOME").reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalOfflineCOGS = expenses
+    .filter(e => e.type === "INCOME" && e.category === "Offline Sale")
+    .reduce((sum, e) => {
+      const productName = e.description.replace("Offline Sale: ", "").split(" (x")[0];
+      const p = products.find(prod => prod.name === productName);
+      const qtyMatch = e.description.match(/\(x(\d+)\)/);
+      const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+      return sum + ((p?.cost || 0) * qty);
+    }, 0);
+
   const totalDamageLoss = expenses.filter(e => e.category === "Inventory Damage / Loss").reduce((sum, e) => sum + Number(e.amount), 0);
   const totalOpEx = expenses.filter(e => e.type !== "INCOME" && e.category !== "Inventory Damage / Loss").reduce((sum, e) => sum + Number(e.amount), 0);
-  const netProfit = grossProfit + totalOtherIncome - totalOpEx - totalDamageLoss;
+  const netProfit = (grossProfit) + (totalOtherIncome - totalOfflineCOGS) - totalOpEx - totalDamageLoss;
 
   // Stock Summary Math
   const inventoryCostValue = products.reduce((sum, p) => sum + (Number(p.stock) * Number(p.cost || 0)), 0);
@@ -618,9 +628,18 @@ export default function AccountDashboard() {
             <span>Rs. {grossProfit.toLocaleString()}</span>
           </div>
 
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "green", marginBottom: "0.2rem" }}>
+            <span>(+) Total Offline Sales (Shop):</span>
+            <span>+ Rs. {expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").reduce((sum,e)=>sum+Number(e.amount),0).toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.0rem", color: "#666", marginBottom: "0.5rem", fontStyle: "italic" }}>
+            <span>(-) Offline Item Cost (COGS):</span>
+            <span>- Rs. {totalOfflineCOGS.toLocaleString()}</span>
+          </div>
+
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "green", marginBottom: "0.5rem" }}>
             <span>(+) Total Other Income (Manual):</span>
-            <span>+ Rs. {totalOtherIncome.toLocaleString()}</span>
+            <span>+ Rs. {expenses.filter(e => e.type === "INCOME" && e.category !== "Offline Sale").reduce((sum,e)=>sum+Number(e.amount),0).toLocaleString()}</span>
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "red", marginBottom: "0.5rem" }}>
