@@ -633,71 +633,96 @@ export default function AccountDashboard() {
             <span>- Rs. {totalDamageLoss.toLocaleString()}</span>
           </div>
 
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            fontSize: "1.8rem", 
-            fontWeight: "900", 
-            background: effectiveTheme === 'dark' ? "#1e293b" : "#f0f0f0", 
-            color: effectiveTheme === 'dark' ? "#fff" : "#000",
-            padding: "1rem",
-            borderRadius: "8px",
-            border: `1px solid ${effectiveTheme === 'dark' ? "#334155" : "#ddd"}`
-          }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.8rem", fontWeight: "900", background: effectiveTheme === 'dark' ? "#1e293b" : "#f0f0f0", color: effectiveTheme === 'dark' ? "#fff" : "#000", padding: "1rem", borderRadius: "8px", border: `1px solid ${effectiveTheme === 'dark' ? "#334155" : "#ddd"}` }}>
             <span>NET PROFIT:</span>
-            <span style={{ color: netProfit >= 0 ? (effectiveTheme === 'dark' ? "#4ade80" : "green") : (effectiveTheme === 'dark' ? "#f87171" : "red") }}>
-              Rs. {netProfit.toLocaleString()}
-            </span>
+            <span style={{ color: netProfit >= 0 ? (effectiveTheme === 'dark' ? "#4ade80" : "green") : (effectiveTheme === 'dark' ? "#f87171" : "red") }}>Rs. {netProfit.toLocaleString()}</span>
           </div>
 
-          {/* Per-Order Breakdown */}
-          <div style={{ marginTop: "3rem" }}>
-            <h3 style={{ borderBottom: "1px solid #ccc", paddingBottom: "0.5rem", marginBottom: "1rem" }}>📋 Order-by-Order Margin Breakdown</h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-              <thead>
-                <tr style={{ background: "#111", color: "white", textAlign: "left" }}>
-                  <th style={{ padding: "0.7rem 1rem" }}>Customer</th>
-                  <th style={{ padding: "0.7rem 1rem" }}>Date</th>
-                  <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Sale Price</th>
-                  <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Cost (COGS)</th>
-                  <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Margin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o, i) => {
-                  const cogs = calculateCOGS(o);
-                  const revenue = Number(o.total || 0);
-                  const margin = revenue - cogs;
-                  return (
-                    <tr key={i} style={{ borderBottom: "1px solid var(--admin-border)", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-                      <td style={{ padding: "0.7rem 1rem" }}>
-                        <div style={{ fontWeight: "bold" }}>{o.name || o.customerName || o.customer_name || "Walk-in"}</div>
-                        <div style={{ fontSize: "0.75rem", opacity: 0.7 }}>{o.phone || o.customer_phone || ""}</div>
-                      </td>
-                      <td style={{ padding: "0.7rem 1rem", color: effectiveTheme === 'dark' ? "#94a3b8" : "#666" }}>
-                        {o.date ? `${new Date(o.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} (${new NepaliDate(new Date(o.date)).format('DD MMMM YYYY')} BS)` : "—"}
-                      </td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {revenue.toLocaleString()}</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#f87171" }}>Rs. {cogs.toLocaleString()}</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "#4ade80" : "#f87171" }}>
-                        {margin >= 0 ? "+" : ""}Rs. {margin.toLocaleString()}
+          {/* Unified Sales Breakdown Calculation */}
+          {(() => {
+            const unifiedSales = [
+              ...orders.map(o => ({
+                type: 'WEB',
+                customer: o.name || o.customerName || o.customer_name || "Web Customer",
+                contact: o.phone || o.customer_phone || "",
+                date: o.date,
+                revenue: Number(o.total || 0),
+                cogs: calculateCOGS(o),
+                desc: o.items ? o.items.map((i:any) => i.name).join(', ') : "Online Order"
+              })),
+              ...expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").map(e => {
+                const productName = e.description.replace("Offline Sale: ", "").split(" (x")[0];
+                const p = products.find(prod => prod.name === productName);
+                const qtyMatch = e.description.match(/\(x(\d+)\)/);
+                const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+                const cogs = p ? (p.cost || 0) * qty : 0;
+                return {
+                  type: 'OFFLINE',
+                  customer: "Walk-in Customer",
+                  contact: "(Physical Sale)",
+                  date: e.date,
+                  revenue: Number(e.amount),
+                  cogs: cogs,
+                  desc: e.description
+                };
+              })
+            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            return (
+              <div style={{ marginTop: "3rem" }}>
+                <h3 style={{ borderBottom: "1px solid #ccc", paddingBottom: "0.5rem", marginBottom: "1rem" }}>📋 Unified Sales & Margin Breakdown</h3>
+                <p style={{ fontSize: "0.8rem", color: "#666", marginBottom: "1rem" }}>Showing all Web Orders and Physical Shop Sales</p>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                  <thead>
+                    <tr style={{ background: "#111", color: "white", textAlign: "left" }}>
+                      <th style={{ padding: "0.7rem 1rem" }}>Customer / Type</th>
+                      <th style={{ padding: "0.7rem 1rem" }}>Date & Details</th>
+                      <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Sale Price</th>
+                      <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Cost (COGS)</th>
+                      <th style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unifiedSales.map((s, i) => {
+                      const margin = s.revenue - s.cogs;
+                      return (
+                        <tr key={i} style={{ borderBottom: "1px solid var(--admin-border)", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
+                          <td style={{ padding: "0.7rem 1rem" }}>
+                            <div style={{ fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                              <span style={{ fontSize: "0.6rem", padding: "2px 5px", borderRadius: "3px", background: s.type === 'WEB' ? "#3b82f6" : "#10b981", color: "white" }}>
+                                {s.type}
+                              </span>
+                              {s.customer}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", opacity: 0.7 }}>{s.contact}</div>
+                          </td>
+                          <td style={{ padding: "0.7rem 1rem", color: effectiveTheme === 'dark' ? "#94a3b8" : "#666" }}>
+                            <div style={{ fontSize: "0.85rem" }}>{s.date ? `${new Date(s.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} (${new NepaliDate(new Date(s.date)).format('DD MMMM YYYY')} BS)` : "—"}</div>
+                            <div style={{ fontSize: "0.7rem", fontStyle: "italic" }}>{s.desc}</div>
+                          </td>
+                          <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {s.revenue.toLocaleString()}</td>
+                          <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#f87171" }}>Rs. {s.cogs.toLocaleString()}</td>
+                          <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "#4ade80" : "#f87171" }}>
+                            {margin >= 0 ? "+" : ""}Rs. {margin.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: "#111", color: "white", fontWeight: "bold" }}>
+                      <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL BUSINESS SALES</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {(totalSalesRevenue + expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").reduce((sum,e)=>sum+Number(e.amount),0)).toLocaleString()}</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {(totalCOGS + unifiedSales.filter(s=>s.type==='OFFLINE').reduce((sum,s)=>sum+s.cogs,0)).toLocaleString()}</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#4ade80" }}>
+                        Rs. {(unifiedSales.reduce((sum,s)=>sum+(s.revenue - s.cogs), 0)).toLocaleString()}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr style={{ background: "#111", color: "white", fontWeight: "bold" }}>
-                  <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL</td>
-                  <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {totalSalesRevenue.toLocaleString()}</td>
-                  <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {totalCOGS.toLocaleString()}</td>
-                  <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: grossProfit >= 0 ? "#4ade80" : "#f87171" }}>
-                    {grossProfit >= 0 ? "+" : ""}Rs. {grossProfit.toLocaleString()}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                  </tfoot>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       )}
 
