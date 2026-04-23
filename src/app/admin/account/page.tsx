@@ -48,6 +48,8 @@ export default function AccountDashboard() {
       setEffectiveTheme(themeMode);
     }
   }, [themeMode]);
+  const [expType, setExpType] = useState("EXPENSE");
+  const [expCategory, setExpCategory] = useState("Marketing");
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [offlineProductId, setOfflineProductId] = useState("");
