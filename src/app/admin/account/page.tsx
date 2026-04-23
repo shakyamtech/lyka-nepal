@@ -278,7 +278,7 @@ export default function AccountDashboard() {
           type: expType, 
           category: expCategory, 
           description: (expCategory === "Offline Sale" || expCategory === "Refund Paid" || expCategory === "Inventory Damage / Loss") && offlineProductId 
-            ? `${expDesc} (x${offlineQty})${!shouldUpdateStock && expCategory === "Refund Paid" ? " [DAMAGED - NO RESTOCK]" : ""}` 
+            ? `${expDesc} (x${offlineQty})${!shouldUpdateStock && expCategory === "Refund Paid" ? " [DAMAGED - NO RESTOCK]" : ""} [PID:${offlineProductId}]` 
             : expDesc, 
           amount: Number(expAmount) 
         })
@@ -364,8 +364,20 @@ export default function AccountDashboard() {
   const totalOfflineCOGS = expenses
     .filter(e => e.type === "INCOME" && e.category === "Offline Sale")
     .reduce((sum, e) => {
-      const productName = e.description.replace("Offline Sale: ", "").split(" (x")[0];
-      const p = products.find(prod => prod.name === productName);
+      // Priority 1: Match by hidden ID tag [PID:xxx]
+      const pidMatch = e.description.match(/\[PID:(.+?)\]/);
+      let p = null;
+      if (pidMatch) {
+        const pid = pidMatch[1];
+        p = products.find(prod => prod.id?.toString() === pid);
+      }
+      
+      // Priority 2: Fallback to name matching (for older entries)
+      if (!p) {
+        const productName = e.description.replace("Offline Sale: ", "").split(" (x")[0];
+        p = products.find(prod => prod.name === productName);
+      }
+
       const qtyMatch = e.description.match(/\(x(\d+)\)/);
       const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
       return sum + ((p?.cost || 0) * qty);
@@ -672,8 +684,16 @@ export default function AccountDashboard() {
                 desc: o.items ? o.items.map((i:any) => i.name).join(', ') : "Online Order"
               })),
               ...expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").map(e => {
-                const productName = e.description.replace("Offline Sale: ", "").split(" (x")[0];
-                const p = products.find(prod => prod.name === productName);
+                const pidMatch = e.description.match(/\[PID:(.+?)\]/);
+                let p = null;
+                if (pidMatch) {
+                  p = products.find(prod => prod.id?.toString() === pidMatch[1]);
+                }
+                if (!p) {
+                  const productName = e.description.replace("Offline Sale: ", "").split(" (x")[0];
+                  p = products.find(prod => prod.name === productName);
+                }
+
                 const qtyMatch = e.description.match(/\(x(\d+)\)/);
                 const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
                 const cogs = p ? (p.cost || 0) * qty : 0;
@@ -684,7 +704,7 @@ export default function AccountDashboard() {
                   date: e.date,
                   revenue: Number(e.amount),
                   cogs: cogs,
-                  desc: e.description
+                  desc: e.description.replace(/\[PID:.+?\]/, "") // Hide the ID tag from the user UI
                 };
               })
             ]
