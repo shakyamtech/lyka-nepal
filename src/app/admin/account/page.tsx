@@ -237,16 +237,23 @@ export default function AccountDashboard() {
     e.preventDefault();
     if (!expAmount) return;
     try {
-      // 1. If Offline Sale with Product, Deduct Stock
-      if (expCategory === "Offline Sale" && offlineProductId) {
+      // 1. If Offline Sale or Refund Paid with Product
+      if (offlineProductId) {
         const product = products.find((p: any) => p.id.toString() === offlineProductId);
         if (product) {
           const qtyNum = Number(offlineQty);
-          if (product.stock < qtyNum) {
-            alert(`⚠️ Out of Stock! Only ${product.stock} units remaining.`);
-            return;
+          let newStock = Number(product.stock);
+
+          if (expCategory === "Offline Sale") {
+            if (product.stock < qtyNum) {
+              alert(`⚠️ Out of Stock! Only ${product.stock} units remaining.`);
+              return;
+            }
+            newStock -= qtyNum;
+          } else if (expCategory === "Refund Paid") {
+            newStock += qtyNum; // Add back to stock
           }
-          const newStock = Number(product.stock) - qtyNum;
+
           const stockRes = await fetch("/api/products", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -263,7 +270,7 @@ export default function AccountDashboard() {
         body: JSON.stringify({ 
           type: expType, 
           category: expCategory, 
-          description: expCategory === "Offline Sale" && offlineProductId 
+          description: (expCategory === "Offline Sale" || expCategory === "Refund Paid") && offlineProductId 
             ? `${expDesc} (x${offlineQty})` 
             : expDesc, 
           amount: Number(expAmount) 
@@ -273,7 +280,7 @@ export default function AccountDashboard() {
       if (res.ok) {
         setExpDesc(""); setExpAmount(""); setOfflineProductId(""); setOfflineQty("1");
         fetchData();
-        alert(expType === "INCOME" ? "Income added & Stock updated!" : "Expense added!");
+        alert(expType === "INCOME" ? "Income added & Stock updated!" : "Entry added & Stock updated!");
       }
     } catch (err) {
       console.error(err);
@@ -436,9 +443,11 @@ export default function AccountDashboard() {
                 )}
               </select>
 
-              {expCategory === "Offline Sale" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem", background: "rgba(16, 185, 129, 0.05)", border: "1px solid #10b981", borderRadius: "8px" }}>
-                  <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#065f46", margin: 0 }}>📦 LINK TO PRODUCT STOCK (AUTO-DEDUCT)</p>
+              {(expCategory === "Offline Sale" || expCategory === "Refund Paid") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem", background: expCategory === "Offline Sale" ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)", border: `1px solid ${expCategory === "Offline Sale" ? "#10b981" : "#ef4444"}`, borderRadius: "8px" }}>
+                  <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: expCategory === "Offline Sale" ? "#065f46" : "#991b1b", margin: 0 }}>
+                    {expCategory === "Offline Sale" ? "📦 LINK TO PRODUCT STOCK (AUTO-DEDUCT)" : "🔄 RE-ADD TO PRODUCT STOCK (RETURN)"}
+                  </p>
                   <select 
                     value={offlineProductId} 
                     onChange={(e) => {
@@ -446,7 +455,7 @@ export default function AccountDashboard() {
                       const p = products.find(prod => prod.id.toString() === e.target.value);
                       if (p) {
                         setExpAmount(p.price.toString());
-                        setExpDesc(`Offline Sale: ${p.name}`);
+                        setExpDesc(expCategory === "Offline Sale" ? `Offline Sale: ${p.name}` : `Refund/Return: ${p.name}`);
                       }
                     }} 
                     style={{ padding: "0.8rem", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }}
