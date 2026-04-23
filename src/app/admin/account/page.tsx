@@ -54,6 +54,8 @@ export default function AccountDashboard() {
   const [expAmount, setExpAmount] = useState("");
   const [offlineProductId, setOfflineProductId] = useState("");
   const [offlineQty, setOfflineQty] = useState("1");
+  const [salesSearch, setSalesSearch] = useState("");
+  const [salesTypeFilter, setSalesTypeFilter] = useState("ALL");
   const [shouldUpdateStock, setShouldUpdateStock] = useState(true);
 
   // Edit Expense State
@@ -685,12 +687,52 @@ export default function AccountDashboard() {
                   desc: e.description
                 };
               })
-            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            ]
+            .filter(s => {
+              const matchesSearch = 
+                s.customer.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                s.contact.toLowerCase().includes(salesSearch.toLowerCase()) ||
+                s.desc.toLowerCase().includes(salesSearch.toLowerCase());
+              const matchesType = salesTypeFilter === "ALL" || s.type === salesTypeFilter;
+              return matchesSearch && matchesType;
+            })
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
             return (
               <div style={{ marginTop: "3rem" }}>
-                <h3 style={{ borderBottom: "1px solid #ccc", paddingBottom: "0.5rem", marginBottom: "1rem" }}>📋 Unified Sales & Margin Breakdown</h3>
-                <p style={{ fontSize: "0.8rem", color: "#666", marginBottom: "1rem" }}>Showing all Web Orders and Physical Shop Sales</p>
+                <h3 style={{ borderBottom: "1px solid var(--admin-border)", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>📋 Unified Sales & Margin Breakdown</h3>
+                
+                {/* Search & Filter Controls */}
+                <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                  <input 
+                    type="text" 
+                    placeholder="Search by name, phone or product..." 
+                    value={salesSearch}
+                    onChange={(e) => setSalesSearch(e.target.value)}
+                    style={{ flex: 1, padding: "0.8rem", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)", borderRadius: "6px", minWidth: "250px" }}
+                  />
+                  <div style={{ display: "flex", background: "var(--admin-card)", border: "1px solid var(--admin-border)", borderRadius: "6px", overflow: "hidden" }}>
+                    {["ALL", "WEB", "OFFLINE"].map(type => (
+                      <button 
+                        key={type}
+                        onClick={() => setSalesTypeFilter(type)}
+                        style={{ 
+                          padding: "0.8rem 1.2rem", 
+                          border: "none", 
+                          background: salesTypeFilter === type ? (type === 'WEB' ? '#3b82f6' : type === 'OFFLINE' ? '#10b981' : '#6366f1') : "transparent",
+                          color: salesTypeFilter === type ? "white" : "var(--admin-text-muted)",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                          fontSize: "0.8rem",
+                          transition: "0.2s"
+                        }}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
                   <thead>
                     <tr style={{ background: "#111", color: "white", textAlign: "left" }}>
@@ -727,12 +769,17 @@ export default function AccountDashboard() {
                         </tr>
                       );
                     })}
+                    {unifiedSales.length === 0 && (
+                      <tr>
+                        <td colSpan={5} style={{ padding: "3rem", textAlign: "center", color: "var(--admin-text-muted)" }}>No records found matching your search/filter.</td>
+                      </tr>
+                    )}
                   </tbody>
                   <tfoot>
                     <tr style={{ background: "#111", color: "white", fontWeight: "bold" }}>
-                      <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL BUSINESS SALES</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {(totalSalesRevenue + expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").reduce((sum,e)=>sum+Number(e.amount),0)).toLocaleString()}</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {(totalCOGS + unifiedSales.filter(s=>s.type==='OFFLINE').reduce((sum,s)=>sum+s.cogs,0)).toLocaleString()}</td>
+                      <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL (FILTERED)</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.revenue, 0).toLocaleString()}</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.cogs, 0).toLocaleString()}</td>
                       <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#4ade80" }}>
                         Rs. {(unifiedSales.reduce((sum,s)=>sum+(s.revenue - s.cogs), 0)).toLocaleString()}
                       </td>
