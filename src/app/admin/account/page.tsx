@@ -48,12 +48,10 @@ export default function AccountDashboard() {
       setEffectiveTheme(themeMode);
     }
   }, [themeMode]);
-
-  // Expense Form State
-  const [expType, setExpType] = useState("EXPENSE");
-  const [expCategory, setExpCategory] = useState("Marketing");
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
+  const [offlineProductId, setOfflineProductId] = useState("");
+  const [offlineQty, setOfflineQty] = useState("1");
 
   // Edit Expense State
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
@@ -237,19 +235,47 @@ export default function AccountDashboard() {
     e.preventDefault();
     if (!expAmount) return;
     try {
+      // 1. If Offline Sale with Product, Deduct Stock
+      if (expCategory === "Offline Sale" && offlineProductId) {
+        const product = products.find((p: any) => p.id.toString() === offlineProductId);
+        if (product) {
+          const qtyNum = Number(offlineQty);
+          if (product.stock < qtyNum) {
+            alert(`⚠️ Out of Stock! Only ${product.stock} units remaining.`);
+            return;
+          }
+          const newStock = Number(product.stock) - qtyNum;
+          const stockRes = await fetch("/api/products", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: offlineProductId, stock: newStock })
+          });
+          if (!stockRes.ok) throw new Error("Failed to update stock");
+        }
+      }
+
+      // 2. Log Entry
       const res = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: expType, category: expCategory, description: expDesc, amount: Number(expAmount) })
+        body: JSON.stringify({ 
+          type: expType, 
+          category: expCategory, 
+          description: expCategory === "Offline Sale" && offlineProductId 
+            ? `${expDesc} (x${offlineQty})` 
+            : expDesc, 
+          amount: Number(expAmount) 
+        })
       });
+
       if (res.ok) {
-        setExpDesc(""); setExpAmount("");
+        setExpDesc(""); setExpAmount(""); setOfflineProductId(""); setOfflineQty("1");
         fetchData();
-        alert(expType === "INCOME" ? "Income added!" : "Expense added!");
+        alert(expType === "INCOME" ? "Income added & Stock updated!" : "Expense added!");
       }
     } catch (err) {
       console.error(err);
-      alert("Error adding expense");
+      alert("Error adding entry");
     }
   };
 
@@ -407,6 +433,43 @@ export default function AccountDashboard() {
                   </>
                 )}
               </select>
+
+              {expCategory === "Offline Sale" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem", background: "rgba(16, 185, 129, 0.05)", border: "1px solid #10b981", borderRadius: "8px" }}>
+                  <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#065f46", margin: 0 }}>📦 LINK TO PRODUCT STOCK (AUTO-DEDUCT)</p>
+                  <select 
+                    value={offlineProductId} 
+                    onChange={(e) => {
+                      setOfflineProductId(e.target.value);
+                      const p = products.find(prod => prod.id.toString() === e.target.value);
+                      if (p) {
+                        setExpAmount(p.price.toString());
+                        setExpDesc(`Offline Sale: ${p.name}`);
+                      }
+                    }} 
+                    style={{ padding: "0.8rem", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }}
+                  >
+                    <option value="">— Select Product —</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.id.toString()}>{p.name} (Stock: {p.stock})</option>
+                    ))}
+                  </select>
+                  <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                    <label style={{ fontSize: "0.9rem" }}>Quantity:</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      value={offlineQty} 
+                      onChange={(e) => {
+                        setOfflineQty(e.target.value);
+                        const p = products.find(prod => prod.id.toString() === offlineProductId);
+                        if (p) setExpAmount((Number(p.price) * Number(e.target.value)).toString());
+                      }} 
+                      style={{ padding: "0.5rem", width: "80px", borderRadius: "4px", border: "1px solid var(--admin-border)" }} 
+                    />
+                  </div>
+                </div>
+              )}
               <input type="text" placeholder="Description (e.g., Cash from walk-in customer)" value={expDesc} onChange={e => setExpDesc(e.target.value)} required style={{ padding: "0.8rem" }} />
               <input type="number" placeholder="Amount (NPR)" value={expAmount} onChange={e => setExpAmount(e.target.value)} required style={{ padding: "0.8rem" }} />
               <button type="submit" style={{ background: "black", color: "white", padding: "1rem", fontWeight: "bold", cursor: "pointer", border: "none" }}>SAVE ENTRY</button>
