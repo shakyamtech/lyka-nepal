@@ -411,32 +411,34 @@ export default function AccountDashboard() {
   return (
     <div className={`${effectiveTheme}-theme`} style={{ background: "var(--admin-bg)", color: "var(--admin-text)", minHeight: "100vh" }}>
       <div className="admin-container" style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-          <h1 style={{ color: 'var(--admin-text)' }}>LYKA Accounting Suite</h1>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <header className="accounting-header">
+          <h1 style={{ color: 'var(--admin-text)', margin: 0 }}>LYKA Accounting Suite</h1>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <button 
               onClick={toggleTheme}
-              style={{ padding: "0.5rem 1rem", borderRadius: "50px", background: "var(--admin-card)", border: "1px solid var(--admin-border)", color: "var(--admin-text)", cursor: "pointer", fontWeight: "bold" }}
+              style={{ padding: "0.5rem 1rem", borderRadius: "50px", background: "var(--admin-card)", border: "1px solid var(--admin-border)", color: "var(--admin-text)", cursor: "pointer", fontWeight: "bold", fontSize: "0.8rem" }}
             >
-              {themeLabel} Mode
+              {themeLabel}
             </button>
-            <Link href="/admin"><button className="action-btn" style={{ background: "var(--admin-sidebar)", color: "white" }}>&larr; Back to Admin</button></Link>
+            <Link href="/admin"><button className="action-btn" style={{ background: "var(--admin-sidebar)", color: "white", fontSize: "0.8rem" }}>&larr; Back</button></Link>
           </div>
         </header>
 
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "1px solid var(--admin-border)", paddingBottom: "1rem" }}>
+      <div className="accounting-tabs">
         {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: "0.8rem 1.5rem",
+              padding: "0.8rem 1.2rem",
               background: activeTab === tab ? (tab === "RETURNS" ? "#dc2626" : "var(--admin-text)") : "transparent",
               color: activeTab === tab ? (effectiveTheme === 'dark' ? "var(--admin-bg)" : "white") : (tab === "RETURNS" ? "#dc2626" : "var(--admin-text)"),
               border: `1px solid ${tab === "RETURNS" ? "#dc2626" : "var(--admin-border)"}`,
               fontWeight: "bold",
               cursor: "pointer",
-              borderRadius: "4px"
+              borderRadius: "4px",
+              fontSize: "0.75rem",
+              flexShrink: 0
             }}
           >
             {tab === "RETURNS" ? "↩ RETURNS" : tab.replace("_", " ")}
@@ -445,7 +447,7 @@ export default function AccountDashboard() {
       </div>
 
       {activeTab === "DAYBOOK" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "3rem" }}>
+        <div className="accounting-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "3rem" }}>
           <div>
             <h3>Add Ledger Entry</h3>
             <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>

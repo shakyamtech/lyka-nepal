@@ -680,4 +680,54 @@ body.admin-body main {
 
 .weather-icon-moon { animation: moon-glow 4s infinite ease-in-out; }
 
+/* Accounting Suite Responsiveness */
+.accounting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.accounting-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--admin-border);
+  padding-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .accounting-header {
+    flex-direction: column;
+    align-items: center !important;
+    text-align: center;
+  }
+  
+  .accounting-tabs {
+    overflow-x: auto;
+    padding-bottom: 1rem;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    width: 100vw;
+    margin-left: -1rem;
+    padding-left: 1rem;
+    scrollbar-width: none;
+  }
+  .accounting-tabs::-webkit-scrollbar { display: none; }
+
+  .accounting-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+
+  .admin-container {
+    padding: 1rem !important;
+  }
+
+  .accounting-header h1 {
+    font-size: 1.5rem !important;
+  }
+}
+
 
