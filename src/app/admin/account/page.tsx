@@ -54,6 +54,7 @@ export default function AccountDashboard() {
   const [expAmount, setExpAmount] = useState("");
   const [offlineProductId, setOfflineProductId] = useState("");
   const [offlineQty, setOfflineQty] = useState("1");
+  const [shouldUpdateStock, setShouldUpdateStock] = useState(true);
 
   // Edit Expense State
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
@@ -251,15 +252,21 @@ export default function AccountDashboard() {
             }
             newStock -= qtyNum;
           } else if (expCategory === "Refund Paid") {
-            newStock += qtyNum; // Add back to stock
+            if (shouldUpdateStock) {
+              newStock += qtyNum; // Add back to stock
+            } else {
+              // Damaged item, do not update newStock (keep it same as old)
+            }
           }
 
-          const stockRes = await fetch("/api/products", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: offlineProductId, stock: newStock })
-          });
-          if (!stockRes.ok) throw new Error("Failed to update stock");
+          if (shouldUpdateStock || expCategory === "Offline Sale") {
+            const stockRes = await fetch("/api/products", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: offlineProductId, stock: newStock })
+            });
+            if (!stockRes.ok) throw new Error("Failed to update stock");
+          }
         }
       }
 
@@ -271,14 +278,14 @@ export default function AccountDashboard() {
           type: expType, 
           category: expCategory, 
           description: (expCategory === "Offline Sale" || expCategory === "Refund Paid") && offlineProductId 
-            ? `${expDesc} (x${offlineQty})` 
+            ? `${expDesc} (x${offlineQty})${!shouldUpdateStock && expCategory === "Refund Paid" ? " [DAMAGED - NO STOCK ADDED]" : ""}` 
             : expDesc, 
           amount: Number(expAmount) 
         })
       });
 
       if (res.ok) {
-        setExpDesc(""); setExpAmount(""); setOfflineProductId(""); setOfflineQty("1");
+        setExpDesc(""); setExpAmount(""); setOfflineProductId(""); setOfflineQty("1"); setShouldUpdateStock(true);
         fetchData();
         alert(expType === "INCOME" ? "Income added & Stock updated!" : "Entry added & Stock updated!");
       }
@@ -479,6 +486,20 @@ export default function AccountDashboard() {
                       style={{ padding: "0.5rem", width: "80px", borderRadius: "4px", border: "1px solid var(--admin-border)" }} 
                     />
                   </div>
+
+                  {expCategory === "Refund Paid" && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem", padding: "0.5rem", background: "rgba(255,255,255,0.1)", borderRadius: "4px" }}>
+                      <input 
+                        type="checkbox" 
+                        id="update-stock-check"
+                        checked={shouldUpdateStock} 
+                        onChange={(e) => setShouldUpdateStock(e.target.checked)} 
+                      />
+                      <label htmlFor="update-stock-check" style={{ fontSize: "0.85rem", cursor: "pointer" }}>
+                        {shouldUpdateStock ? "✅ Add back to sellable stock" : "❌ Damaged item (Do not add back to stock)"}
+                      </label>
+                    </div>
+                  )}
                 </div>
               )}
               <input type="text" placeholder="Description (e.g., Cash from walk-in customer)" value={expDesc} onChange={e => setExpDesc(e.target.value)} required style={{ padding: "0.8rem" }} />
