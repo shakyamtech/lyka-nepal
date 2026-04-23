@@ -550,11 +550,16 @@ export default function AccountDashboard() {
                    required 
                    style={{ padding: "0.8rem", width: "100%" }} 
                  />
-                 {offlineProductId && (
-                   <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "4px", fontStyle: "italic" }}>
-                     Retail Price: Rs. {products.find(p => p.id.toString() === offlineProductId)?.price.toLocaleString()} per unit
-                   </div>
-                 )}
+                 {offlineProductId && (() => {
+                    const p = products.find(prod => prod.id.toString() === offlineProductId);
+                    if (!p) return null;
+                    return (
+                      <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "4px", fontStyle: "italic", display: "flex", justifyContent: "space-between" }}>
+                        <span>Retail Price: Rs. {p.price.toLocaleString()} / unit</span>
+                        <span style={{ color: "#991b1b" }}>Unit Cost: Rs. {p.cost?.toLocaleString() || 0}</span>
+                      </div>
+                    );
+                  })()}
                </div>
                <button type="submit" style={{ background: "black", color: "white", padding: "1rem", fontWeight: "bold", cursor: "pointer", border: "none" }}>SAVE ENTRY</button>
             </form>
