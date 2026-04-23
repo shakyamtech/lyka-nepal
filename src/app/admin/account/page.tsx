@@ -359,8 +359,9 @@ export default function AccountDashboard() {
   const grossProfit = totalSalesRevenue - totalCOGS;
 
   const totalOtherIncome = expenses.filter(e => e.type === "INCOME").reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalOpEx = expenses.filter(e => e.type !== "INCOME").reduce((sum, e) => sum + Number(e.amount), 0);
-  const netProfit = grossProfit + totalOtherIncome - totalOpEx;
+  const totalDamageLoss = expenses.filter(e => e.category === "Inventory Damage / Loss").reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalOpEx = expenses.filter(e => e.type !== "INCOME" && e.category !== "Inventory Damage / Loss").reduce((sum, e) => sum + Number(e.amount), 0);
+  const netProfit = grossProfit + totalOtherIncome - totalOpEx - totalDamageLoss;
 
   // Stock Summary Math
   const inventoryCostValue = products.reduce((sum, p) => sum + (Number(p.stock) * Number(p.cost || 0)), 0);
@@ -622,9 +623,14 @@ export default function AccountDashboard() {
             <span>+ Rs. {totalOtherIncome.toLocaleString()}</span>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "red", borderBottom: "1px solid #000", paddingBottom: "1rem", marginBottom: "1rem" }}>
-            <span>(-) Total Manual Expenses:</span>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "red", marginBottom: "0.5rem" }}>
+            <span>(-) Total Manual Expenses (Operating):</span>
             <span>- Rs. {totalOpEx.toLocaleString()}</span>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "#991b1b", borderBottom: "1px solid #000", paddingBottom: "1rem", marginBottom: "1rem" }}>
+            <span>(-) Loss on Damaged Products:</span>
+            <span>- Rs. {totalDamageLoss.toLocaleString()}</span>
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.8rem", fontWeight: "900", background: "#f0f0f0", padding: "1rem" }}>
