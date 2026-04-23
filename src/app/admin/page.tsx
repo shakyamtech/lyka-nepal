@@ -584,10 +584,7 @@ export default function AdminPage() {
       finalSizes = Object.entries(refillSizes).map(([sz, qty]) => `${sz}:${qty}`).join(', ');
       finalStock = Object.values(refillSizes).reduce((sum, qty) => sum + Number(qty || 0), 0);
     } else {
-      const newStockStr = prompt(`Update stock for ${refillingProduct.name}:`, refillingProduct.stock.toString());
-      if (newStockStr === null) return;
-      finalStock = Number(newStockStr);
-      if (isNaN(finalStock)) return alert("Invalid stock number");
+      finalStock = Number(refillingProduct.stock);
     }
 
     if (Math.abs(Number(finalStock) - Number(refillingProduct.stock)) > 100) {
@@ -1421,6 +1418,57 @@ export default function AdminPage() {
           )}
         </div>
       </main>
+      {/* Refill Stock Modal */}
+      {refillingProduct && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--admin-card)', padding: '2.5rem', borderRadius: '16px', maxWidth: '500px', width: '100%', border: '1px solid var(--admin-border)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <h2 style={{ marginBottom: '0.5rem', color: 'var(--admin-text)' }}>Refill Inventory</h2>
+            <p style={{ color: 'var(--admin-text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>Update stock levels for <strong>{refillingProduct.name}</strong></p>
+
+            {['Clothes', 'Shoes'].includes(refillingProduct.category) ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                {Object.keys(refillSizes).sort().map(size => (
+                  <div key={size} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold', textAlign: 'center', color: 'var(--admin-text-muted)' }}>{size}</label>
+                    <input 
+                      type="number" 
+                      value={refillSizes[size]} 
+                      onChange={(e) => setRefillSizes(prev => ({ ...prev, [size]: e.target.value }))}
+                      style={{ padding: '0.8rem', textAlign: 'center', background: 'var(--admin-bg)', color: 'var(--admin-text)', border: '1px solid var(--admin-border)', borderRadius: '8px' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ marginBottom: '2rem' }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--admin-text-muted)' }}>General Stock Quantity</label>
+                <input 
+                  type="number" 
+                  value={refillingProduct.stock} 
+                  onChange={(e) => setRefillingProduct({ ...refillingProduct, stock: Number(e.target.value) })}
+                  style={{ width: '100%', padding: '1rem', background: 'var(--admin-bg)', color: 'var(--admin-text)', border: '1px solid var(--admin-border)', borderRadius: '8px', fontSize: '1.2rem', fontWeight: 'bold' }}
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button 
+                onClick={() => setRefillingProduct(null)}
+                style={{ flex: 1, padding: '1rem', borderRadius: '8px', background: 'transparent', border: '1px solid var(--admin-border)', color: 'var(--admin-text)', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveRefill}
+                style={{ flex: 2, padding: '1rem', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PrintableBill printingOrders={printingOrders} />
     </div>
   );
