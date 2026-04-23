@@ -633,9 +633,21 @@ export default function AccountDashboard() {
             <span>- Rs. {totalDamageLoss.toLocaleString()}</span>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.8rem", fontWeight: "900", background: "#f0f0f0", padding: "1rem" }}>
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            fontSize: "1.8rem", 
+            fontWeight: "900", 
+            background: effectiveTheme === 'dark' ? "#1e293b" : "#f0f0f0", 
+            color: effectiveTheme === 'dark' ? "#fff" : "#000",
+            padding: "1rem",
+            borderRadius: "8px",
+            border: `1px solid ${effectiveTheme === 'dark' ? "#334155" : "#ddd"}`
+          }}>
             <span>NET PROFIT:</span>
-            <span style={{ color: netProfit >= 0 ? "green" : "red" }}>Rs. {netProfit.toLocaleString()}</span>
+            <span style={{ color: netProfit >= 0 ? (effectiveTheme === 'dark' ? "#4ade80" : "green") : (effectiveTheme === 'dark' ? "#f87171" : "red") }}>
+              Rs. {netProfit.toLocaleString()}
+            </span>
           </div>
 
           {/* Per-Order Breakdown */}
@@ -658,11 +670,16 @@ export default function AccountDashboard() {
                   const margin = revenue - cogs;
                   return (
                     <tr key={i} style={{ borderBottom: "1px solid var(--admin-border)", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-                      <td style={{ padding: "0.7rem 1rem" }}>{o.customerName || "—"}</td>
-                      <td style={{ padding: "0.7rem 1rem", color: "#666" }}>{o.date ? `${new Date(o.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(o.date)).format('DD MMMM YYYY')} BS)` : "—"}</td>
+                      <td style={{ padding: "0.7rem 1rem" }}>
+                        <div style={{ fontWeight: "bold" }}>{o.name || o.customerName || o.customer_name || "Walk-in"}</div>
+                        <div style={{ fontSize: "0.75rem", opacity: 0.7 }}>{o.phone || o.customer_phone || ""}</div>
+                      </td>
+                      <td style={{ padding: "0.7rem 1rem", color: effectiveTheme === 'dark' ? "#94a3b8" : "#666" }}>
+                        {o.date ? `${new Date(o.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} (${new NepaliDate(new Date(o.date)).format('DD MMMM YYYY')} BS)` : "—"}
+                      </td>
                       <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {revenue.toLocaleString()}</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "red" }}>Rs. {cogs.toLocaleString()}</td>
-                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "green" : "red" }}>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#f87171" }}>Rs. {cogs.toLocaleString()}</td>
+                      <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "#4ade80" : "#f87171" }}>
                         {margin >= 0 ? "+" : ""}Rs. {margin.toLocaleString()}
                       </td>
                     </tr>
