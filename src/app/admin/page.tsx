@@ -111,8 +111,115 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
             </div>
           </div>
         ))}
+        {/* Admin Footer */}
+        <footer style={{ marginTop: '4rem', padding: '2rem 0', textAlign: 'center', borderTop: '1px solid var(--admin-border)', color: 'var(--admin-text-muted)', fontSize: '0.8rem', opacity: 0.6 }}>
+          <p>&copy; {new Date().getFullYear()} LYKA Admin Suite • Accounting & Finance Edition</p>
+          <p style={{ marginTop: '0.5rem' }}>Secure Financial Environment</p>
+        </footer>
       </div>
     </div>
+  );
+}
+
+function AdminHeader({ currentUser, weather, themeMode, toggleTheme, refreshWeather, isRefreshing }: { currentUser: any, weather: any, themeMode: string, toggleTheme: () => void, refreshWeather: () => void, isRefreshing: boolean }) {
+  if (!weather || !currentUser) return null;
+  const hour = new Date().getHours();
+
+  const renderWeatherIcon = () => {
+    const desc = weather.desc.toLowerCase();
+    const isNight = hour >= 18 || hour < 6;
+    if (desc.includes('thunder')) return <div className="weather-icon-thunder">⚡</div>;
+    if (desc.includes('rain') || desc.includes('drizzle')) return <div className="weather-icon-rain">🌧️</div>;
+    if (desc.includes('cloud') || desc.includes('overcast') || desc.includes('fog')) return <div className="weather-icon-cloud">☁️</div>;
+    if (desc.includes('snow')) return <div className="weather-icon-cloud">❄️</div>;
+    
+    if (isNight) return <div className="weather-icon-moon" style={{ fontSize: '2.2rem' }}>🌙</div>;
+    return <div className="weather-icon-sun">☀️</div>;
+  };
+
+  return (
+    <header style={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      marginBottom: '3rem', 
+      paddingTop: '1rem',
+      width: '100%'
+    }}>
+      <div style={{ flex: 1 }}>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: '800', marginBottom: '0.4rem', color: 'var(--admin-text)', margin: 0 }}>
+          {hour >= 18 || hour < 6 ? '🌙' : '☀️'} Good {hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening'}, {currentUser.displayName || currentUser.email.split('@')[0]}!
+        </h1>
+        <p style={{ color: 'var(--admin-text-muted)', fontSize: '1rem', margin: '0.4rem 0 0 0' }}>Welcome back to your Admin Suite.</p>
+      </div>
+      
+      <div className="weather-card" style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '1.2rem', 
+        background: 'var(--admin-card)', 
+        padding: '0.8rem 1.5rem', 
+        borderRadius: '16px', 
+        border: '1px solid var(--admin-border)', 
+        boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+        flexShrink: 0,
+        position: 'relative'
+      }}>
+        <button 
+          onClick={refreshWeather}
+          disabled={isRefreshing}
+          style={{
+            position: 'absolute',
+            top: '-10px',
+            right: '-10px',
+            background: 'var(--admin-card)',
+            border: '1px solid var(--admin-border)',
+            borderRadius: '50%',
+            width: '24px',
+            height: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: isRefreshing ? 'wait' : 'pointer',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+            zIndex: 10,
+            opacity: isRefreshing ? 0.7 : 1
+          }}
+          title="Refresh Location"
+        >
+          <svg 
+            className={isRefreshing ? "weather-icon-thunder" : ""} 
+            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+          >
+            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', opacity: isRefreshing ? 0.5 : 1, transition: 'opacity 0.3s' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '45px', fontSize: '2.2rem' }}>
+            {isRefreshing ? '📍' : renderWeatherIcon()}
+          </div>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: '800', lineHeight: 1, color: 'var(--admin-text)' }}>
+              {isRefreshing ? '--' : weather.temp}°C
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--admin-text-muted)', textTransform: 'capitalize', marginTop: '4px' }}>
+              {isRefreshing ? 'Detecting...' : `${weather.city}, ${weather.desc}`}
+            </div>
+          </div>
+        </div>
+        <div style={{ width: '1px', height: '25px', background: 'var(--admin-border)' }}></div>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{weather.humidity}%</div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase' }}>Humidity</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{weather.wind} <span style={{fontSize: '0.6rem'}}>km/h</span></div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase' }}>Wind</div>
+          </div>
+        </div>
+      </div>
+    </header>
   );
 }
 
@@ -145,10 +252,110 @@ export default function AdminPage() {
   const [sizeQuantities, setSizeQuantities] = useState<{ [key: string]: string }>({});
   const [refillingProduct, setRefillingProduct] = useState<any | null>(null);
   const [refillSizes, setRefillSizes] = useState<{ [key: string]: string }>({});
+  const [categories, setCategories] = useState<any[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [topSellersRange, setTopSellersRange] = useState("ALL");
   const [isMounted, setIsMounted] = useState(false);
   const [printingOrders, setPrintingOrders] = useState<any[]>([]);
   const [isVerifying, setIsVerifying] = useState<string | null>(null); // orderId being verified
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "auto">("auto");
+  const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">("light");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [weather, setWeather] = useState<any>(null);
+  const [isWeatherRefreshing, setIsWeatherRefreshing] = useState(false);
+
+  const updateLocation = () => {
+    setIsWeatherRefreshing(true);
+    const fetchWeatherData = (lat: number, lon: number, cityName: string) => {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`)
+        .then(res => res.json())
+        .then(data => {
+          const cur = data.current;
+          const codeMap: any = {
+            0: "Clear Sky", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+            45: "Foggy", 48: "Fog", 51: "Drizzle", 61: "Rain", 71: "Snow", 95: "Thunderstorm"
+          };
+          setWeather({
+            temp: Math.round(cur.temperature_2m),
+            desc: codeMap[cur.weather_code] || "Clear",
+            humidity: cur.relative_humidity_2m,
+            wind: Math.round(cur.wind_speed_10m),
+            city: cityName
+          });
+          setIsWeatherRefreshing(false);
+        })
+        .catch(() => {
+          setWeather({ temp: "22", desc: "Clear Sky", humidity: "40", wind: "10", city: "Lalitpur" });
+          setIsWeatherRefreshing(false);
+        });
+    };
+
+    const tryIPDetection = () => {
+      fetch('https://ipapi.co/json/')
+        .then(res => res.json())
+        .then(ipData => {
+          if (ipData.latitude && ipData.longitude) {
+            fetchWeatherData(ipData.latitude, ipData.longitude, ipData.city || "Local Area");
+          } else {
+            throw new Error("IP data incomplete");
+          }
+        })
+        .catch(() => {
+          // Final fallback
+          fetchWeatherData(27.6710, 85.3240, "Lalitpur");
+        });
+    };
+
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+            .then(res => res.json())
+            .then(geo => {
+              const city = geo.address.city || geo.address.town || geo.address.village || geo.address.suburb || "Local Area";
+              fetchWeatherData(latitude, longitude, city);
+            })
+            .catch(() => fetchWeatherData(latitude, longitude, "Local Area"));
+        },
+        () => tryIPDetection(),
+        { timeout: 8000, enableHighAccuracy: true }
+      );
+    } else {
+      tryIPDetection();
+    }
+  };
+
+  useEffect(() => {
+    updateLocation();
+  }, []);
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem('adminThemeMode') as "light" | "dark" | "auto";
+    if (savedMode) setThemeMode(savedMode);
+
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+    
+    document.body.classList.add('admin-body');
+    return () => {
+      document.body.classList.remove('admin-body');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (themeMode === "auto") {
+      const hour = new Date().getHours();
+      setEffectiveTheme(hour >= 18 || hour < 6 ? "dark" : "light");
+    } else {
+      setEffectiveTheme(themeMode);
+    }
+  }, [themeMode]);
 
   const handlePrintIndividual = (order: any) => {
     setPrintingOrders([order]);
@@ -177,6 +384,7 @@ export default function AdminPage() {
   const [newPass, setNewPass] = useState("");
   const [newRole, setNewRole] = useState("user");
   const [newKey, setNewKey] = useState("");
+  const [newDisplayName, setNewDisplayName] = useState("");
 
   // Notification State
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -219,9 +427,16 @@ export default function AdminPage() {
     const data = await res.json();
 
     if (res.ok && data.success) {
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
       setCurrentUser(data.user);
+      localStorage.setItem('adminUser', JSON.stringify(data.user));
       fetchProducts();
       fetchOrders();
+      fetchCategories();
       if (data.user.role === 'admin') fetchUsers();
     } else {
       alert("Invalid credentials!");
@@ -259,6 +474,11 @@ export default function AdminPage() {
     const res = await fetch("/api/users");
     const data = await res.json();
     if (Array.isArray(data)) setUsers(data);
+  };
+  const fetchCategories = async () => {
+    const res = await fetch("/api/categories");
+    const data = await res.json();
+    if (Array.isArray(data)) setCategories(data);
   };
 
   // Handlers
@@ -403,16 +623,57 @@ export default function AdminPage() {
     e.preventDefault();
     const res = await fetch('/api/users', {
       method: 'POST', headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: newEmail, password: newPass, role: newRole, recoveryKey: newKey })
+      body: JSON.stringify({ email: newEmail, password: newPass, role: newRole, recoveryKey: newKey, displayName: newDisplayName })
     });
     if (res.ok) {
       alert("User added successfully!");
-      setNewEmail(""); setNewPass(""); setNewRole("user"); setNewKey("");
+      setNewEmail(""); setNewPass(""); setNewRole("user"); setNewKey(""); setNewDisplayName("");
       fetchUsers();
     } else {
       const data = await res.json();
       alert("Failed: " + data.error);
     }
+  };
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName) return;
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newCategoryName })
+    });
+    if (res.ok) {
+      setNewCategoryName("");
+      fetchCategories();
+    } else {
+      alert("Failed to add category.");
+    }
+  };
+
+  const handleUpdateMyName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDisplayName) return;
+    const res = await fetch('/api/users', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: currentUser.id, displayName: newDisplayName })
+    });
+    if (res.ok) {
+      alert("Name updated successfully!");
+      setCurrentUser({ ...currentUser, displayName: newDisplayName });
+      setNewDisplayName("");
+      fetchUsers();
+    } else {
+      alert("Failed to update name.");
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (!confirm("Delete this category? Products in this category will still exist but won't have a linked category in filters.")) return;
+    const res = await fetch(`/api/categories?id=${id}`, { method: 'DELETE' });
+    if (res.ok) fetchCategories();
+    else alert("Failed to delete category.");
   };
 
   const handleUploadQR = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -457,34 +718,93 @@ export default function AdminPage() {
 
   // Render Login Layout
   if (!currentUser) {
+    const toggleTheme = () => {
+      let next: "light" | "dark" | "auto";
+      if (themeMode === "light") next = "dark";
+      else if (themeMode === "dark") next = "auto";
+      else next = "light";
+      setThemeMode(next);
+      localStorage.setItem('adminThemeMode', next);
+    };
+
+    const themeLabel = themeMode === "light" ? "☀️ Light" : themeMode === "dark" ? "🌙 Dark" : "🕒 Auto";
+
     return (
-      <div className="admin-login-container">
+      <div className={`admin-login-container ${effectiveTheme}-theme`} style={{ background: 'var(--admin-bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button 
+          onClick={toggleTheme}
+          style={{ position: 'absolute', top: '2rem', right: '2rem', padding: '0.6rem 1.2rem', borderRadius: '50px', background: 'var(--admin-card)', border: '1px solid var(--admin-border)', color: 'var(--admin-text)', cursor: 'pointer', zIndex: 10, fontWeight: 'bold' }}
+        >
+          {themeLabel} Mode
+        </button>
         {!showForgot ? (
-          <form className="admin-login-form" onSubmit={handleLogin}>
-            <h2>Admin Login</h2>
-            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            <button type="submit">Login</button>
+          <form className="admin-login-form" onSubmit={handleLogin} style={{ background: 'var(--admin-card)', border: '1px solid var(--admin-border)', color: 'var(--admin-text)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ 
+                background: "transparent", 
+                color: "var(--admin-text)", 
+                border: "1px solid var(--admin-border)",
+                padding: "0.5rem 1.5rem", 
+                fontWeight: "300", 
+                letterSpacing: "0.25em",
+                textTransform: "uppercase",
+                display: "inline-flex",
+                justifyContent: "center",
+                alignItems: "center"
+              }}>
+                <span style={{ fontSize: "1.4rem", whiteSpace: "nowrap" }}>LYKA NEPAL</span>
+              </div>
+            </div>
+            <h2 style={{ color: 'var(--admin-text)', fontSize: '1.6rem', fontWeight: '300', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '0', textAlign: 'center' }}>Welcome</h2>
+            <p style={{ textAlign: 'center', color: 'var(--admin-text-muted)', fontSize: '0.9rem', marginTop: '-1rem' }}>Admin Access Panel</p>
+            
+            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ borderRadius: '12px', border: '1px solid var(--admin-border)', background: 'rgba(255,255,255,0.05)' }} />
+            <div style={{ position: 'relative' }}>
+              <input type={showPass ? "text" : "password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ borderRadius: '12px', border: '1px solid var(--admin-border)', background: 'rgba(255,255,255,0.05)', width: '100%' }} />
+              <span 
+                onClick={() => setShowPass(!showPass)} 
+                style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.6 }}
+              >
+                {showPass ? "👁️" : "🙈"}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ width: 'auto', accentColor: '#ff9a9e' }} id="remember" />
+              <label htmlFor="remember" style={{ cursor: 'pointer', color: 'var(--admin-text-muted)' }}>Stay logged in</label>
+            </div>
+            <button type="submit" style={{ background: 'linear-gradient(45deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)', color: 'white', borderRadius: '12px', padding: '1.2rem', fontSize: '1rem', letterSpacing: '1px', textTransform: 'uppercase', boxShadow: '0 10px 20px rgba(255, 154, 158, 0.3)', border: 'none' }}>Login to Suite</button>
             <p style={{ marginTop: "1rem", textAlign: "center", fontSize: "0.9rem" }}>
-              <a href="#" onClick={(e) => { e.preventDefault(); setShowForgot(true); }}>Forgot Password?</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); setShowForgot(true); }} style={{ color: '#ff9a9e', fontWeight: '500' }}>Forgot Password?</a>
             </p>
           </form>
         ) : (
-          <form className="admin-login-form" onSubmit={handleReset}>
-            <h2 style={{ fontSize: "1.5rem" }}>Reset Password</h2>
-            <p style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "1rem" }}>Provide your specific Recovery Key to reset your password instantly.</p>
-            <input type="email" placeholder="Your Email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
-            <input type="text" placeholder="Recovery Key" value={resetKey} onChange={(e) => setResetKey(e.target.value)} required />
-            <input type="password" placeholder="New Password" value={resetNewPass} onChange={(e) => setResetNewPass(e.target.value)} required />
-            <button type="submit">Set New Password</button>
+          <form className="admin-login-form" onSubmit={handleReset} style={{ background: 'var(--admin-card)', border: '1px solid var(--admin-border)', color: 'var(--admin-text)' }}>
+            <img src="/logo.png" alt="LYKA" style={{ width: '80px', margin: '0 auto', filter: effectiveTheme === 'dark' ? 'brightness(0) invert(1)' : 'none' }} />
+            <h2 style={{ fontSize: "1.5rem", color: 'var(--admin-text)', fontWeight: '300' }}>Reset Password</h2>
+            <p style={{ fontSize: "0.85rem", color: "var(--admin-text-muted)", marginBottom: "1rem", textAlign: 'center' }}>Secure key required for instant reset.</p>
+            <input type="email" placeholder="Your Email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required style={{ borderRadius: '12px' }} />
+            <input type="text" placeholder="Recovery Key" value={resetKey} onChange={(e) => setResetKey(e.target.value)} required style={{ borderRadius: '12px' }} />
+            <input type="password" placeholder="New Password" value={resetNewPass} onChange={(e) => setResetNewPass(e.target.value)} required style={{ borderRadius: '12px' }} />
+            <button type="submit" style={{ background: 'linear-gradient(45deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)', color: 'white', borderRadius: '12px' }}>Reset Access</button>
             <p style={{ marginTop: "1rem", textAlign: "center", fontSize: "0.9rem" }}>
-              <a href="#" onClick={(e) => { e.preventDefault(); setShowForgot(false); }}>Back to Login</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); setShowForgot(false); }} style={{ color: '#ff9a9e' }}>Back to Login</a>
             </p>
           </form>
         )}
       </div>
     );
   }
+
+  const toggleTheme = () => {
+    let next: "light" | "dark" | "auto";
+    if (themeMode === "light") next = "dark";
+    else if (themeMode === "dark") next = "auto";
+    else next = "light";
+    setThemeMode(next);
+    localStorage.setItem('adminThemeMode', next);
+  };
+
+  const themeLabel = themeMode === "light" ? "☀️ Light" : themeMode === "dark" ? "🌙 Dark" : "🕒 Auto";
 
   // Render Dashboard
   const lowStockItems = products.filter(p => typeof p.stock === 'number' && p.stock < 3);
@@ -526,517 +846,645 @@ export default function AdminPage() {
 
   if (!isMounted) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading LYKA Admin Suite...</div>;
 
+  const isSuperAdmin = currentUser.email === 'shakya.mahes@gmail.com';
+
   return (
-    <div className="admin-dashboard container">
-      <h1>LYKA Nepal - Admin Dashboard</h1>
-      <p style={{ marginBottom: "2rem" }}>Logged in as <strong>{currentUser.email}</strong> ({currentUser.role})</p>
-      <button className="logout-btn" onClick={() => setCurrentUser(null)} style={{ top: "40px" }}>Logout</button>
-
-      {lowStockItems.length > 0 && (
-        <div style={{ background: "#fee2e2", border: "2px solid #ef4444", padding: "1.5rem", borderRadius: "8px", marginBottom: "2rem" }}>
-          <h2 style={{ color: "#b91c1c", marginBottom: "0.5rem" }}>⚠️ LOW STOCK ALERT</h2>
-          <ul style={{ color: "#7f1d1d", marginLeft: "1.5rem" }}>
-            {lowStockItems.map(item => (
-              <li key={item.id}><strong>{item.name}</strong> has only {item.stock} left in stock!</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Analytics Dashboard */}
-      <AnalyticsSection orders={orders} products={products} />
-
-      <div style={{ marginBottom: "3rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h2>Top Selling Items</h2>
-          <select
-            value={topSellersRange}
-            onChange={e => setTopSellersRange(e.target.value)}
-            style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--border)", fontFamily: "inherit" }}
-          >
-            <option value="ALL">All Time</option>
-            <option value="MONTH">This Month</option>
-            <option value="TODAY">Today</option>
-          </select>
-        </div>
-        
-        <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
-          {dynamicTopSellers.length === 0 ? (
-            <p style={{ color: "var(--text-muted)", fontStyle: "italic" }}>No sales recorded for this period.</p>
-          ) : (
-            dynamicTopSellers.map((item, index) => (
-              <div key={item.id} style={{ background: "white", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", flex: "1 1 250px", display: "flex", alignItems: "center" }}>
-                <h1 style={{ fontSize: "2.5rem", color: "var(--primary)", marginRight: "1rem" }}>#{index + 1}</h1>
-                <div>
-                  <h4>{item.name}</h4>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{item.count} units sold</p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="admin-grid">
-        <section className="add-product-section">
-          <h2>Add New Product</h2>
-          <form className="add-product-form" onSubmit={handleAddProduct}>
-            <input type="text" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} required />
-            <select value={category} onChange={(e) => {
-              const cat = e.target.value;
-              setCategory(cat);
-              setSizeQuantities({});
-            }} required>
-              <option value="Clothes">Clothes</option>
-              <option value="Bags">Bags & Accessories</option>
-              <option value="Shoes">Shoes</option>
-            </select>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <input type="number" placeholder="Sale Price (NPR)" value={price} onChange={(e) => setPrice(e.target.value)} required style={{ flex: 1 }} />
-              <input type="number" placeholder="Your Cost (NPR)" value={cost} onChange={(e) => setCost(e.target.value)} required style={{ flex: 1 }} />
-            </div>
-            <input type="number" placeholder="Total Stock (Limit)" value={stock} onChange={(e) => setStock(e.target.value)} required />
-            <textarea placeholder="Product Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", minHeight: "80px" }}></textarea>
-            {category === 'Clothes' && (
-              <div style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", background: "#f9fafb" }}>
-                <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Clothing Inventory (Enter stock per size):</p>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {['S', 'M', 'L', 'XL', 'XXL'].map(s => (
-                    <div key={s} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", width: "60px" }}>
-                      <label style={{ fontSize: "0.75rem", fontWeight: "600", textAlign: "center" }}>{s}</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        value={sizeQuantities[s] || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '') {
-                             setSizeQuantities(prev => ({ ...prev, [s]: val }));
-                             return;
-                          }
-                          const newVal = Number(val);
-                          const currentTotal = Object.entries(sizeQuantities).reduce((sum, [k, v]) => k === s ? sum : sum + Number(v || 0), 0);
-                          const maxAllowed = Number(stock || 0);
-                          
-                          if (currentTotal + newVal <= maxAllowed) {
-                            setSizeQuantities(prev => ({ ...prev, [s]: val }));
-                          } else {
-                            const remaining = Math.max(0, maxAllowed - currentTotal);
-                            setSizeQuantities(prev => ({ ...prev, [s]: remaining.toString() }));
-                          }
-                        }}
-                        style={{ padding: "0.4rem", textAlign: "center" }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {category === 'Shoes' && (
-              <div style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", background: "#f9fafb" }}>
-                <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Shoe Inventory (Enter stock per size):</p>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {['36', '37', '38', '39', '40', '41', '42'].map(s => (
-                    <div key={s} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", width: "50px" }}>
-                      <label style={{ fontSize: "0.75rem", fontWeight: "600", textAlign: "center" }}>{s}</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        value={sizeQuantities[s] || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '') {
-                             setSizeQuantities(prev => ({ ...prev, [s]: val }));
-                             return;
-                          }
-                          const newVal = Number(val);
-                          const currentTotal = Object.entries(sizeQuantities).reduce((sum, [k, v]) => k === s ? sum : sum + Number(v || 0), 0);
-                          const maxAllowed = Number(stock || 0);
-                          
-                          if (currentTotal + newVal <= maxAllowed) {
-                            setSizeQuantities(prev => ({ ...prev, [s]: val }));
-                          } else {
-                            const remaining = Math.max(0, maxAllowed - currentTotal);
-                            setSizeQuantities(prev => ({ ...prev, [s]: remaining.toString() }));
-                          }
-                        }}
-                        style={{ padding: "0.4rem", textAlign: "center" }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <label style={{ fontSize: "0.9rem", marginTop: "0.5rem", fontWeight: "bold" }}>Upload Photo:</label>
-            <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} required style={{ border: "none", padding: "0" }} />
-            <button type="submit" style={{ marginTop: "1rem" }}>Add Product</button>
-          </form>
-        </section>
-
-        <section className="manage-products">
-          <h2>Manage Inventory</h2>
-
-          {notifications.length > 0 && (
-            <div 
-              style={{ background: "#e0f2fe", padding: "1rem", borderRadius: "8px", marginBottom: "2rem", border: "1px solid #bae6fd", position: "relative" }}
-              onClick={() => setUnreadCount(0)}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                <h3 style={{ fontSize: "1rem", color: "#0369a1", margin: 0 }}>
-                  Live Notifications
-                  {unreadCount > 0 && (
-                    <span style={{ 
-                      marginLeft: "8px", 
-                      background: "#ef4444", 
-                      color: "white", 
-                      borderRadius: "50%", 
-                      padding: "2px 8px", 
-                      fontSize: "0.75rem",
-                      verticalAlign: "middle"
-                    }}>
-                      {unreadCount}
-                    </span>
-                  )}
-                </h3>
-                {unreadCount > 0 && <span style={{ fontSize: "0.75rem", color: "#0369a1", fontWeight: "600" }}>(Click to clear)</span>}
-              </div>
-              {notifications.map((n, i) => (
-                <div key={i} style={{ fontSize: "0.9rem", padding: "0.5rem 0", borderBottom: i !== notifications.length - 1 ? "1px solid #bae6fd" : "none" }}>
-                  <strong>{new Date(n.timestamp).toLocaleTimeString()}:</strong> {n.message}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="inventory-list">
-            {products.map((p) => (
-              <div key={p.id} className="inventory-item">
-                <div className="item-thumbnail" style={{ backgroundImage: `url(${p.image})` }}></div>
-                <div className="item-details">
-                  <h4>{p.name}</h4>
-                  <span>NPR {p.price} | {p.category} | Stock: {p.stock}</span>
-                  {p.sizes && <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>Sizes: {p.sizes}</p>}
-                </div>
-                <div>
-                  <button className="edit-btn" onClick={() => handleUpdateStock(p)}>Refill Stock</button>
-                  <button className="delete-btn" onClick={() => handleDelete(p.id)}>Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {refillingProduct && (
-            <div style={{ 
-              position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
-              background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", 
-              alignItems: "center", zIndex: 1000 
-            }}>
-              <div style={{ background: "white", padding: "2rem", borderRadius: "8px", maxWidth: "500px", width: "90%" }}>
-                <h3>Refill Stock: {refillingProduct.name}</h3>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "1.5rem" }}>Update stock for each size below.</p>
-                
-                {['Clothes', 'Shoes'].includes(refillingProduct.category) ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-                    {Object.keys(refillSizes).sort().map(sz => (
-                      <div key={sz} style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                        <label style={{ fontSize: "0.85rem", fontWeight: "600" }}>{sz}</label>
-                        <input 
-                          type="number" 
-                          value={refillSizes[sz]} 
-                          onChange={e => setRefillSizes(prev => ({ ...prev, [sz]: e.target.value }))}
-                          style={{ padding: "0.5rem", border: "1px solid var(--border)", borderRadius: "4px" }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p>Stock will be updated via prompt.</p>
-                )}
-
-                <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
-                  <button 
-                    onClick={() => setRefillingProduct(null)}
-                    style={{ padding: "0.8rem 1.5rem", background: "#f1f5f9", border: "none", borderRadius: "4px", cursor: "pointer" }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={handleSaveRefill}
-                    style={{ padding: "0.8rem 1.5rem", background: "var(--primary)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "600" }}
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* Customer Orders */}
-      <section className="admin-orders" style={{ marginTop: "3rem", padding: "2rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-        <h2>Customer Orders & Payments</h2>
-        <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Review uploaded payment screenshots and verify orders to deduct inventory stock.</p>
-
-        <div style={{ marginBottom: "2rem", display: "flex", gap: "1rem", alignItems: "center" }}>
-          <div style={{ flex: 1, display: "flex", gap: "1rem" }}>
-            <input
-              type="text"
-              placeholder="Search by ID, Name, or Email..."
-              value={orderSearchTerm}
-              onChange={(e) => setOrderSearchTerm(e.target.value)}
-              style={{ flex: 1, padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "8px" }}
-            />
-            {orderSearchTerm && (
-              <button
-                onClick={() => setOrderSearchTerm("")}
-                style={{ padding: "0.8rem 1.5rem", background: "#e5e7eb", border: "none", borderRadius: "8px", cursor: "pointer" }}
-              >
-                Clear
-              </button>
-            )}
-          </div>
+    <div className={`admin-layout ${effectiveTheme}-theme`}>
+      {/* Sidebar Navigation */}
+      <aside className="admin-sidebar no-print">
+        <div className="sidebar-logo">LYKA ADMIN</div>
+        <nav className="sidebar-nav">
           <button 
-            onClick={handlePrintAll}
-            style={{ padding: "0.8rem 1.5rem", background: "#6366f1", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}
+            className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
           >
-            🖨️ Print All Verified
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            <span>Dashboard</span>
           </button>
+          <button 
+            className={`sidebar-item ${activeTab === 'orders' ? 'active' : ''}`}
+            onClick={() => setActiveTab('orders')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+              <span>Orders</span>
+            </div>
+            {orders.filter(o => !o.status || o.status === 'Pending Verification').length > 0 && (
+              <span className="order-badge">
+                {orders.filter(o => !o.status || o.status === 'Pending Verification').length}
+              </span>
+            )}
+          </button>
+          <button 
+            className={`sidebar-item ${activeTab === 'inventory' ? 'active' : ''}`}
+            onClick={() => setActiveTab('inventory')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              <span>Inventory</span>
+            </div>
+            {products.length > 0 && (
+              <span className="inventory-badge">
+                {products.length}
+              </span>
+            )}
+          </button>
+          <button 
+            className={`sidebar-item ${activeTab === 'categories' ? 'active' : ''}`}
+            onClick={() => setActiveTab('categories')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <span>Categories</span>
+          </button>
+          <button 
+            className="sidebar-item"
+            onClick={() => window.location.href = '/admin/account'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            <span>Accounting</span>
+          </button>
+          <button 
+            className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>Settings</span>
+          </button>
+          <div style={{ marginTop: '2rem', padding: '0 1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
+            <p style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem' }}>Appearance</p>
+            <button 
+              className="sidebar-item" 
+              onClick={toggleTheme}
+              style={{ background: 'rgba(255,255,255,0.05)' }}
+            >
+              {themeMode === 'light' ? (
+                <><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><span>Dark Mode</span></>
+              ) : themeMode === 'dark' ? (
+                <><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path><circle cx="12" cy="12" r="5"></circle></svg><span>Auto Mode</span></>
+              ) : (
+                <><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><span>Light Mode</span></>
+              )}
+            </button>
+          </div>
+        </nav>
+        <div style={{ marginTop: 'auto', padding: '1rem' }}>
+          <button className="logout-btn" onClick={() => setCurrentUser(null)} style={{ width: '100%', marginBottom: 0 }}>Logout</button>
         </div>
+      </aside>
 
-        {/* HIDDEN PRINTABLE SECTION */}
-        <div className="printable-bill">
-          {printingOrders.map((order, idx) => (
-            <div key={order.id} className="bill-page">
-              <div className="bill-header">
-                <h1 style={{ margin: 0, fontSize: "2rem" }}>LYKA NEPAL</h1>
-                <p style={{ margin: "5px 0" }}>Imadole, Lalitpur, Nepal | Phone: 9800000000</p>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", textAlign: "left" }}>
-                  <div>
-                    <h2 style={{ margin: 0 }}>INVOICE</h2>
-                    <p>Order ID: <strong>{order.id}</strong></p>
-                    <p>Date: {new Date(order.date).toLocaleDateString()}</p>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p>Status: <strong>{order.status}</strong></p>
-                  </div>
+      <main className="admin-main-content">
+        <AdminHeader 
+          currentUser={currentUser} 
+          weather={weather} 
+          themeMode={themeMode} 
+          toggleTheme={toggleTheme} 
+          refreshWeather={updateLocation}
+          isRefreshing={isWeatherRefreshing}
+        />
+
+        <div className="tab-content">
+          {activeTab === 'dashboard' && (
+            <>
+               {notifications.length > 0 && (
+                 <div 
+                   style={{ 
+                     background: 'var(--admin-card)', 
+                     padding: "1.5rem", 
+                     borderRadius: "12px", 
+                     marginBottom: "2.5rem", 
+                     border: "1px solid var(--admin-border)", 
+                     position: "relative", 
+                     cursor: 'pointer',
+                     boxShadow: '0 4px 20px rgba(0,0,0,0.05)' 
+                   }}
+                   onClick={() => setUnreadCount(0)}
+                 >
+                   <h3 style={{ fontSize: "1.1rem", color: "var(--primary)", marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                     <span style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', display: 'inline-block' }}></span>
+                     Live Notifications
+                   </h3>
+                   {notifications.slice(0, 5).map((n, i) => (
+                     <div key={i} style={{ fontSize: "0.9rem", padding: "0.8rem 0", borderBottom: i !== Math.min(4, notifications.length - 1) ? "1px solid var(--admin-border)" : "none", color: 'var(--admin-text)' }}>
+                       <strong style={{ color: 'var(--admin-text-muted)' }}>{new Date(n.timestamp).toLocaleTimeString()}:</strong> {n.message}
+                     </div>
+                   ))}
+                   {notifications.length > 5 && <p style={{ fontSize: '0.8rem', color: 'var(--admin-text-muted)', marginTop: '0.8rem' }}>+ {notifications.length - 5} more notifications...</p>}
+                 </div>
+               )}
+
+              {/* Analytics Dashboard */}
+              <AnalyticsSection orders={orders} products={products} />
+
+              <div style={{ marginBottom: "3rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                  <h2>Top Selling Items</h2>
+                  <select
+                    value={topSellersRange}
+                    onChange={e => setTopSellersRange(e.target.value)}
+                    style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--border)", fontFamily: "inherit" }}
+                  >
+                    <option value="ALL">All Time</option>
+                    <option value="MONTH">This Month</option>
+                    <option value="TODAY">Today</option>
+                  </select>
+                </div>
+                
+                <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
+                  {dynamicTopSellers.length === 0 ? (
+                    <p style={{ color: "var(--text-muted)", fontStyle: "italic" }}>No sales recorded for this period.</p>
+                  ) : (
+                    dynamicTopSellers.map((item, index) => (
+                      <div key={item.id} style={{ background: "white", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", flex: "1 1 250px", display: "flex", alignItems: "center" }}>
+                        <h1 style={{ fontSize: "2.5rem", color: "var(--primary)", marginRight: "1rem" }}>#{index + 1}</h1>
+                        <div>
+                          <h4>{item.name}</h4>
+                          <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{item.count} units sold</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
+            </>
+          )}
 
-              <div className="bill-section">
-                <h3>Customer Details:</h3>
-                <p>Name: <strong>{order.name}</strong></p>
-                <p>Phone: {order.phone}</p>
-                <p>Address: {order.address}</p>
-              </div>
-
-              <div className="bill-section">
-                <h3>Order Items:</h3>
-                <table className="bill-table">
-                  <thead>
-                    <tr>
-                      <th>Product Name</th>
-                      <th>Quantity</th>
-                      <th>Price</th>
-                      <th>Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(order.rawItems || order.items || []).map((item: any, i: number) => (
-                      <tr key={i}>
-                        <td>{item.name}</td>
-                        <td>{item.quantity || 1}</td>
-                        <td>NPR {item.price}</td>
-                        <td>NPR {Number(item.price) * Number(item.quantity || 1)}</td>
-                      </tr>
+          {activeTab === 'inventory' && (
+            <div className="admin-grid">
+              <section className="add-product-section">
+                <h2>Add New Product</h2>
+                <form className="add-product-form" onSubmit={handleAddProduct}>
+                  <input type="text" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <select value={category} onChange={(e) => {
+                    const cat = e.target.value;
+                    setCategory(cat);
+                    setSizeQuantities({});
+                  }} required>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="bill-total">
-                Grand Total: NPR {order.total}
-              </div>
-
-              <div style={{ marginTop: "50px", textAlign: "center", borderTop: "1px solid #ccc", paddingTop: "20px" }}>
-                <p>Thank you for shopping with LYKA NEPAL!</p>
-                <p style={{ fontSize: "0.8rem" }}>This is a computer generated invoice.</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {orders.length === 0 ? (
-          <p>No orders yet.</p>
-        ) : (
-          <div className="order-queue">
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-              {orders
-                .filter(order => {
-                  const s = orderSearchTerm.toLowerCase();
-                  return order.id.toLowerCase().includes(s) ||
-                    order.name.toLowerCase().includes(s) ||
-                    order.email.toLowerCase().includes(s);
-                })
-                .map(order => (
-                  <div key={order.id} style={{ background: "white", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", gap: "2rem", flexWrap: "wrap" }}>
-                    <div style={{ flex: "1 1 300px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                        <h3 style={{ margin: 0 }}>{order.id}</h3>
-                        <span style={{
-                          padding: "0.25rem 0.75rem",
-                          borderRadius: "50px",
-                          fontSize: "0.8rem",
-                          fontWeight: "bold",
-                          background: order.status === 'Verified' ? '#dcfce7' : order.status === 'Rejected' ? '#fee2e2' : '#fef9c3',
-                          color: order.status === 'Verified' ? '#166534' : order.status === 'Rejected' ? '#991b1b' : '#854d0e'
-                        }}>
-                          {order.status || 'Pending'}
-                        </span>
+                  </select>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <input type="number" placeholder="Sale Price (NPR)" value={price} onChange={(e) => setPrice(e.target.value)} required style={{ flex: 1 }} />
+                    <input type="number" placeholder="Your Cost (NPR)" value={cost} onChange={(e) => setCost(e.target.value)} required style={{ flex: 1 }} />
+                  </div>
+                  <input type="number" placeholder="Total Stock (Limit)" value={stock} onChange={(e) => setStock(e.target.value)} required />
+                  <textarea placeholder="Product Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", minHeight: "80px" }}></textarea>
+                  {category === 'Clothes' && (
+                    <div className="theme-card" style={{ padding: "0.8rem", borderRadius: "4px" }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Clothing Inventory (Enter stock per size):</p>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {['S', 'M', 'L', 'XL', 'XXL'].map(s => (
+                          <div key={s} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", width: "60px" }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "600", textAlign: "center" }}>{s}</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={sizeQuantities[s] || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '') {
+                                   setSizeQuantities(prev => ({ ...prev, [s]: val }));
+                                   return;
+                                }
+                                const newVal = Number(val);
+                                const currentTotal = Object.entries(sizeQuantities).reduce((sum, [k, v]) => k === s ? sum : sum + Number(v || 0), 0);
+                                const maxAllowed = Number(stock || 0);
+                                
+                                if (currentTotal + newVal <= maxAllowed) {
+                                  setSizeQuantities(prev => ({ ...prev, [s]: val }));
+                                } else {
+                                  const remaining = Math.max(0, maxAllowed - currentTotal);
+                                  setSizeQuantities(prev => ({ ...prev, [s]: remaining.toString() }));
+                                }
+                              }}
+                              style={{ padding: "0.4rem", textAlign: "center" }}
+                            />
+                          </div>
+                        ))}
                       </div>
-                      <p><strong>Customer:</strong> {order.name} ({order.email})</p>
-                      <p><strong>Phone:</strong> <a href={`tel:${order.phone}`} style={{ color: "var(--primary)", fontWeight: "bold" }}>{order.phone || "N/A"}</a></p>
-                      <p><strong>Address:</strong> {order.address || "N/A"}</p>
-                      <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
-                      <p><strong>Total:</strong> NPR {order.total}</p>
+                    </div>
+                  )}
+                  {category === 'Shoes' && (
+                    <div className="theme-card" style={{ padding: "0.8rem", borderRadius: "4px" }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Shoe Inventory (Enter stock per size):</p>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {['36', '37', '38', '39', '40', '41', '42'].map(s => (
+                          <div key={s} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", width: "50px" }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "600", textAlign: "center" }}>{s}</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={sizeQuantities[s] || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '') {
+                                   setSizeQuantities(prev => ({ ...prev, [s]: val }));
+                                   return;
+                                }
+                                const newVal = Number(val);
+                                const currentTotal = Object.entries(sizeQuantities).reduce((sum, [k, v]) => k === s ? sum : sum + Number(v || 0), 0);
+                                const maxAllowed = Number(stock || 0);
+                                
+                                if (currentTotal + newVal <= maxAllowed) {
+                                  setSizeQuantities(prev => ({ ...prev, [s]: val }));
+                                } else {
+                                  const remaining = Math.max(0, maxAllowed - currentTotal);
+                                  setSizeQuantities(prev => ({ ...prev, [s]: remaining.toString() }));
+                                }
+                              }}
+                              style={{ padding: "0.4rem", textAlign: "center" }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <label style={{ fontSize: "0.9rem", marginTop: "0.5rem", fontWeight: "bold" }}>Upload Photo:</label>
+                  <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} required style={{ border: "none", padding: "0" }} />
+                  <button type="submit" style={{ marginTop: "1rem" }}>Add Product</button>
+                </form>
+              </section>
 
-                      <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                        {order.status === 'Verified' && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handlePrintIndividual(order);
-                            }}
-                            style={{ padding: "0.5rem 1rem", background: "#4f46e5", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
+              <section className="manage-products">
+                <h2>Manage Inventory</h2>
+                <div className="inventory-list">
+                  {products.map((p) => (
+                    <div key={p.id} className="inventory-item">
+                      <div className="item-thumbnail" style={{ backgroundImage: `url(${p.image})` }}></div>
+                      <div className="item-details">
+                        <h4>{p.name}</h4>
+                        <span style={{ fontSize: '0.85rem' }}>NPR {p.price} | {p.category} | Stock: {p.stock}</span>
+                        {p.sizes && <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>Sizes: {p.sizes}</p>}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button className="edit-btn" onClick={() => handleUpdateStock(p)}>Refill</button>
+                        <button className="delete-btn" onClick={() => handleDelete(p.id)}>X</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'categories' && (
+            <section className="manage-categories-section" style={{ padding: "2.5rem", borderRadius: "8px", maxWidth: "800px" }}>
+              <h2>Manage Product Categories</h2>
+              <form onSubmit={handleAddCategory} style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem" }}>
+                <input 
+                  type="text" 
+                  placeholder="New Category Name (e.g. Perfume)" 
+                  value={newCategoryName} 
+                  onChange={e => setNewCategoryName(e.target.value)}
+                  style={{ flex: 1, padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "8px" }}
+                />
+                <button type="submit" style={{ padding: "0 2rem", borderRadius: '8px' }}>Add Category</button>
+              </form>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem" }}>
+                {categories.map(cat => (
+                  <div key={cat.id} className="category-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", borderRadius: "8px" }}>
+                    <span style={{ fontWeight: "700" }}>{cat.name}</span>
+                    <button 
+                      onClick={() => handleDeleteCategory(cat.id)}
+                      style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.8rem", fontWeight: 'bold' }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'orders' && (
+            <section className="admin-orders" style={{ padding: "2rem", background: "white", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              <h2>Customer Orders & Payments</h2>
+              <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Review uploaded payment screenshots and verify orders to deduct inventory stock.</p>
+
+              <div style={{ marginBottom: "2rem", display: "flex", gap: "1rem", alignItems: "center" }}>
+                <div style={{ flex: 1, display: "flex", gap: "1rem" }}>
+                  <input
+                    type="text"
+                    placeholder="Search by ID, Name, or Email..."
+                    value={orderSearchTerm}
+                    onChange={(e) => setOrderSearchTerm(e.target.value)}
+                    style={{ flex: 1, padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "8px" }}
+                  />
+                  {orderSearchTerm && (
+                    <button
+                      onClick={() => setOrderSearchTerm("")}
+                      style={{ padding: "0.8rem 1.5rem", background: "#e5e7eb", border: "none", borderRadius: "8px", cursor: "pointer" }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <button 
+                  onClick={handlePrintAll}
+                  style={{ padding: "0.8rem 1.5rem", background: "#6366f1", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}
+                >
+                  🖨️ Print All Verified
+                </button>
+              </div>
+
+              {orders.length === 0 ? (
+                <p>No orders yet.</p>
+              ) : (
+                <div className="order-queue">
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                    {orders
+                      .filter(order => {
+                        const s = orderSearchTerm.toLowerCase();
+                        return order.id.toLowerCase().includes(s) ||
+                          order.name.toLowerCase().includes(s) ||
+                          order.email.toLowerCase().includes(s);
+                      })
+                      .map(order => (
+                        <div key={order.id} className="theme-card" style={{ background: "var(--admin-card)", padding: "2rem", borderRadius: "20px", border: "1px solid var(--admin-border)", display: "flex", gap: "3rem", flexWrap: "nowrap", width: "100%", boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}>
+                          <div style={{ flex: "1 1 300px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                              <h3 style={{ margin: 0 }}>{order.id}</h3>
+                              <span className={`status-badge ${
+                                order.status === 'Verified' ? 'verified' : 
+                                order.status === 'Rejected' ? 'rejected' : 'pending'
+                              }`}>
+                                {order.status || 'Pending Verification'}
+                              </span>
+                            </div>
+                            <p><strong>Customer:</strong> {order.name} ({order.email})</p>
+                            <p><strong>Phone:</strong> <a href={`tel:${order.phone}`} style={{ color: "var(--primary)", fontWeight: "bold" }}>{order.phone || "N/A"}</a></p>
+                            <p><strong>Address:</strong> {order.address || "N/A"}</p>
+                            <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
+                            <p><strong>Total:</strong> NPR {order.total}</p>
+
+                            <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                              {order.status === 'Verified' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handlePrintIndividual(order);
+                                  }}
+                                  style={{ padding: "0.5rem 1rem", background: "#4f46e5", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
+                                >
+                                  🖨️ Print Bill
+                                </button>
+                              )}
+                              {(!order.status || order.status === 'Pending Verification') && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={isVerifying === order.id}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleVerifyOrder(order.id, 'VERIFY');
+                                    }}
+                                    style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
+                                  >
+                                    {isVerifying === order.id ? "⌛ Verifying..." : "☑ Verify Payment"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isVerifying === order.id}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleVerifyOrder(order.id, 'REJECT');
+                                    }}
+                                    style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
+                                  >
+                                    {isVerifying === order.id ? "..." : "✕ Reject"}
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleDeleteOrder(order.id)}
+                                style={{ padding: "0.5rem 1rem", background: "none", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: "4px", cursor: "pointer", fontSize: "0.85rem" }}
+                              >
+                                🗑 Delete Record
+                              </button>
+                            </div>
+                          </div>
+
+                          {order.screenshotUrl && (
+                            <div style={{ flex: "0 0 450px", borderLeft: "2px solid var(--admin-border)", paddingLeft: "3rem", display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <strong style={{ marginBottom: '1rem', display: 'block', fontSize: '1rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--admin-text-muted)' }}>Payment Screenshot</strong>
+                              <a href={order.screenshotUrl} target="_blank" rel="noreferrer" style={{ display: "block" }}>
+                                <img src={order.screenshotUrl} alt="Payment" style={{ width: "100%", maxHeight: "350px", objectFit: "contain", border: "1px solid var(--admin-border)", borderRadius: "12px", boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeTab === 'settings' && (
+            <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+              {/* My Profile - Only for Super Admin to edit, others just see info */}
+              <section className="theme-card" style={{ flex: "1 1 100%", padding: "2rem", borderRadius: "8px" }}>
+                <h2>My Profile</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem' }}>Current Display Name: <strong style={{ color: 'var(--primary)' }}>{currentUser.displayName || "Not Set"}</strong></p>
+                    <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: 'var(--admin-text-muted)' }}>Email: {currentUser.email}</p>
+                    <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>Role: {isSuperAdmin ? "Super Admin" : "Administrator"}</p>
+                  </div>
+                  {isSuperAdmin && (
+                    <form onSubmit={handleUpdateMyName} style={{ display: 'flex', gap: '0.5rem', flex: 2 }}>
+                      <input 
+                        type="text" 
+                        placeholder="Update My Name" 
+                        value={newDisplayName} 
+                        onChange={(e) => setNewDisplayName(e.target.value)} 
+                        style={{ flex: 1, padding: '0.8rem', border: '1px solid var(--border)', borderRadius: '8px' }} 
+                      />
+                      <button type="submit" style={{ padding: '0 1.5rem', borderRadius: '8px', background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer' }}>Save Name</button>
+                    </form>
+                  )}
+                </div>
+              </section>
+
+              {/* Theme Settings Box */}
+              <section className="theme-card" style={{ flex: "1 1 100%", padding: "2rem", borderRadius: "12px", border: "1px solid var(--admin-border)" }}>
+                <h2 style={{ marginBottom: '0.5rem' }}>Interface Theme</h2>
+                <p style={{ color: 'var(--admin-text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Personalize how your LYKA Admin Suite looks.
+                </p>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  {[
+                    { mode: 'light', icon: '☀️', label: 'Light' },
+                    { mode: 'dark', icon: '🌙', label: 'Dark' },
+                    { mode: 'auto', icon: '🕒', label: 'Auto' }
+                  ].map((item) => (
+                    <button 
+                      key={item.mode}
+                      onClick={() => {
+                        const mode = item.mode as any;
+                        setThemeMode(mode);
+                        localStorage.setItem('adminThemeMode', mode);
+                      }}
+                      style={{ 
+                        flex: 1, 
+                        minWidth: '100px',
+                        padding: '1.5rem', 
+                        borderRadius: '12px', 
+                        border: themeMode === item.mode ? '2px solid #ff9a9e' : '1px solid var(--admin-border)', 
+                        background: themeMode === item.mode ? 'rgba(255, 154, 158, 0.05)' : 'var(--admin-card)', 
+                        color: 'var(--admin-text)',
+                        cursor: 'pointer', 
+                        textAlign: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>{item.icon}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{item.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {/* Team Management - All Admins can see, but only Super Admin can set names */}
+              <section className="theme-card" style={{ flex: "1 1 400px", padding: "2rem", borderRadius: "8px" }}>
+                <h2>Staff & User Management</h2>
+                <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Add staff accounts to help review orders.</p>
+                <form onSubmit={handleAddSubUser} style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "2rem" }}>
+                  {isSuperAdmin && (
+                    <input type="text" placeholder="Full Name (e.g. Anjali Shakya)" value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
+                  )}
+                  <input type="email" placeholder="Email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
+                  <input type="text" placeholder="Password" value={newPass} onChange={e => setNewPass(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
+                  <input type="text" placeholder="Recovery Key (Secret word to reset password)" value={newKey} onChange={e => setNewKey(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
+                  <select value={newRole} onChange={e => setNewRole(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px", background: 'var(--admin-card)', color: 'var(--admin-text)' }}>
+                    <option value="admin">Administrator (Full Control)</option>
+                    <option value="user">Staff (Restricted)</option>
+                  </select>
+                  <button type="submit" style={{ padding: "0.8rem", background: "var(--foreground)", color: "white", border: "none", borderRadius: "4px" }}>Create User</button>
+                </form>
+                <div>
+                  <h3>Active Accounts</h3>
+                  {users
+                    .filter(u => u.email !== 'shakya.mahes@gmail.com' || isSuperAdmin)
+                    .map(u => (
+                    <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "1rem 0", borderBottom: "1px solid var(--border)" }}>
+                      <span>
+                        <strong style={{ display: 'block' }}>{u.displayName || "No Name Set"}</strong>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--admin-text-muted)' }}>{u.email} ({u.role})</span>
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {isSuperAdmin && (
+                          <button 
+                            onClick={() => {
+                              const newN = prompt("Enter new name for this user:", u.displayName || "");
+                              if (newN !== null) {
+                                fetch('/api/users', {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ id: u.id, displayName: newN })
+                                }).then(res => {
+                                  if (res.ok) fetchUsers();
+                                  else alert("Failed to update name");
+                                });
+                              }
+                            }} 
+                            style={{ color: "var(--primary)", border: "none", background: "none", cursor: "pointer", fontSize: '0.8rem', fontWeight: 'bold' }}
                           >
-                            🖨️ Print Bill
+                            Edit Name
                           </button>
                         )}
-                        {(!order.status || order.status === 'Pending Verification') && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={isVerifying === order.id}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleVerifyOrder(order.id, 'VERIFY');
-                              }}
-                              style={{ padding: "0.5rem 1rem", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
-                            >
-                              {isVerifying === order.id ? "⌛ Verifying..." : "☑ Verify Payment"}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isVerifying === order.id}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleVerifyOrder(order.id, 'REJECT');
-                              }}
-                              style={{ padding: "0.5rem 1rem", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: isVerifying === order.id ? "not-allowed" : "pointer", fontWeight: "bold", opacity: isVerifying === order.id ? 0.7 : 1 }}
-                            >
-                              {isVerifying === order.id ? "..." : "✕ Reject"}
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => handleDeleteOrder(order.id)}
-                          style={{ padding: "0.5rem 1rem", background: "none", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: "4px", cursor: "pointer", fontSize: "0.85rem" }}
-                        >
-                          🗑 Delete Record
-                        </button>
+                        {u.id !== currentUser.id && isSuperAdmin && <button onClick={() => handleDeleteSubUser(u.id)} style={{ color: "red", border: "none", background: "none", cursor: "pointer", fontSize: '0.8rem', fontWeight: 'bold' }}>Remove</button>}
                       </div>
                     </div>
-
-                    {order.screenshotUrl && (
-                      <div style={{ flex: "0 0 300px", borderLeft: "1px solid var(--border)", paddingLeft: "2rem" }}>
-                        <strong>Screenshot:</strong>
-                        <a href={order.screenshotUrl} target="_blank" rel="noreferrer" style={{ display: "block", marginTop: "0.5rem" }}>
-                          <img src={order.screenshotUrl} alt="Payment" style={{ width: "100%", maxHeight: "200px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "4px" }} />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </section>
+              {/* Branding Assets */}
+              <section style={{ flex: "1 1 400px", padding: "2rem", background: "white", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <h2>Site Branding</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
+                  <div><label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold' }}>Update Logo</label><input type="file" onChange={handleUploadLogo} accept="image/*" /></div>
+                  <div><label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold' }}>Update Payment QR</label><input type="file" onChange={handleUploadQR} accept="image/*" /></div>
+                  <div><label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold' }}>Update Hero Image</label><input type="file" onChange={handleUploadHero} accept="image/*" /></div>
+                </div>
+              </section>
             </div>
-          </div>
-        )}
-      </section>
-
-      {/* Admin Operations Only */}
-      {currentUser.role === 'admin' && (
-        <div style={{ display: "flex", gap: "2rem", marginTop: "3rem", flexWrap: "wrap" }}>
-
-          {/* Team Management */}
-          <section style={{ flex: "1 1 400px", padding: "2rem", background: "white", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-            <h2>Staff & User Management</h2>
-            <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Add new staff users or admins so they can review orders too.</p>
-
-            <form onSubmit={handleAddSubUser} style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "2rem" }}>
-              <input type="email" placeholder="New User Email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
-              <input type="text" placeholder="Temporary Password" value={newPass} onChange={e => setNewPass(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
-              <input type="text" placeholder="Recovery Key (e.g. Secret123)" value={newKey} onChange={e => setNewKey(e.target.value)} required style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }} />
-              <select value={newRole} onChange={e => setNewRole(e.target.value)} style={{ padding: "0.8rem", border: "1px solid var(--border)", borderRadius: "4px" }}>
-                <option value="user">Staff / User (Can only manage products/orders)</option>
-                <option value="admin">Admin (Can manage users & settings too)</option>
-              </select>
-              <button type="submit" style={{ padding: "0.8rem", background: "var(--foreground)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>Create User</button>
-            </form>
-
-            <div>
-              <h3>Active Accounts</h3>
-              <ul style={{ listStyle: "none", padding: 0, marginTop: "1rem" }}>
-                {users.map(u => (
-                  <li key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", borderBottom: "1px solid var(--border)" }}>
-                    <div>
-                      <strong>{u.email}</strong> <span style={{ fontSize: "0.8rem", background: "#e5e7eb", padding: "2px 6px", borderRadius: "4px" }}>{u.role}</span>
-                      <br />
-                      <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Recovery Key: {u.recoveryKey}</span>
-                    </div>
-                    {u.id !== currentUser.id && (
-                      <button onClick={() => handleDeleteSubUser(u.id)} style={{ color: "red", border: "none", background: "none", cursor: "pointer" }}>Remove</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          {/* QR Settings */}
-          <section style={{ flex: "1 1 400px", padding: "2rem", background: "white", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-            <h2>Payment QR Settings</h2>
-            <p style={{ marginBottom: "1rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Upload the official Payment QR Code image that will be shown to customers at checkout. We recommend uploading an eSewa or FonePay QR.</p>
-
-            <div style={{ border: "2px dashed var(--border)", padding: "2rem", textAlign: "center", borderRadius: "8px" }}>
-              <input type="file" accept="image/*" id="qr-upload" style={{ display: "none" }} onChange={handleUploadQR} />
-              <label htmlFor="qr-upload" style={{ display: "inline-block", padding: "1rem 2rem", background: "var(--primary)", color: "white", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", marginBottom: "1rem" }}>
-                Select QR Image
-              </label>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>This will instantly replace the `/qr.png` file on the site.</p>
-            </div>
-          </section>
-
-          {/* Hero Settings */}
-          <section style={{ flex: "1 1 400px", padding: "2rem", background: "white", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-            <h2>Hero Background (Parallax)</h2>
-            <p style={{ marginBottom: "1rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Upload a high-quality background image for your Storefront's "New Arrivals" section. It will automatically apply a smooth parallax effect.</p>
-
-            <div style={{ border: "2px dashed var(--border)", padding: "2rem", textAlign: "center", borderRadius: "8px" }}>
-              <input type="file" accept="image/*" id="hero-upload" style={{ display: "none" }} onChange={handleUploadHero} />
-              <label htmlFor="hero-upload" style={{ display: "inline-block", padding: "1rem 2rem", background: "var(--primary)", color: "white", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", marginBottom: "1rem" }}>
-                Select Background Image
-              </label>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Best results with landscape images (wide).</p>
-            </div>
-          </section>
-
+          )}
         </div>
-      )}
+      </main>
+      <PrintableBill printingOrders={printingOrders} />
     </div>
   );
 }
+
+const PrintableBill = ({ printingOrders }: { printingOrders: any[] }) => {
+  if (printingOrders.length === 0) return null;
+  
+  return (
+    <div className="printable-bill light-theme" style={{ color: '#000000', background: '#ffffff' }}>
+      {printingOrders.map((order) => (
+        <div key={order.id} className="bill-page" style={{ color: '#000000', background: '#ffffff', padding: '40px', border: 'none' }}>
+          <div className="bill-header" style={{ borderBottom: '3px solid black', paddingBottom: '1rem', marginBottom: '2rem', textAlign: 'center' }}>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: '900', letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 0.5rem 0', color: 'black' }}>LYKA NEPAL</h1>
+            <p style={{ color: 'black', margin: 0 }}>Invoice for Order #{order.id}</p>
+          </div>
+          <div className="bill-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', color: 'black', marginBottom: '2rem' }}>
+            <div style={{ color: 'black' }}>
+              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Bill To:</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'black', margin: '0' }}>{order.name}</p>
+              <p style={{ color: 'black', margin: '0.2rem 0' }}>{order.address || "No Address Provided"}</p>
+              <p style={{ color: 'black', margin: '0.2rem 0' }}>Phone: {order.phone || "N/A"}</p>
+              <p style={{ color: 'black', margin: '0.2rem 0' }}>Email: {order.email || "N/A"}</p>
+            </div>
+            <div style={{ textAlign: 'right', color: 'black' }}>
+              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Order Reference:</p>
+              <p style={{ fontWeight: 'bold', color: 'black', margin: '0' }}>#{order.id}</p>
+              <p style={{ color: 'black', fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem' }}>Order Date:</p>
+              <p style={{ color: 'black', margin: '0' }}>{new Date(order.date).toLocaleString()}</p>
+              <p style={{ color: 'black', marginTop: '0.5rem' }}><strong>Status:</strong> {order.status || 'Verified'}</p>
+            </div>
+          </div>
+          <table className="bill-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', color: 'black' }}>
+            <thead>
+              <tr style={{ background: '#f0f0f0' }}>
+                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Description</th>
+                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Qty</th>
+                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Unit Price</th>
+                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(order.rawItems || order.items || []).map((item: any, i: number) => (
+                <tr key={i}>
+                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>{item.name}</td>
+                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>{item.quantity || 1}</td>
+                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>NPR {item.price}</td>
+                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>NPR {Number(item.price) * Number(item.quantity || 1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="bill-total">
+            <div style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#666', marginBottom: '50px' }}>
+              Thank you for choosing LYKA Nepal. We appreciate your business!
+            </div>
+            <div style={{ fontSize: '1rem', color: '#000' }}>
+              Total Items: {(order.rawItems || order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)}
+            </div>
+            <div className="bill-total-amount">
+              GRAND TOTAL: NPR {order.total}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};

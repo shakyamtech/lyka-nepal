@@ -3,7 +3,12 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f9f9f9;
+  background: linear-gradient(135deg, #fff5f7 0%, #ffffff 100%);
+  transition: background 0.3s ease;
+}
+
+.admin-login-container.dark-theme {
+  background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
 }
 
 .admin-login-form {
@@ -180,82 +185,437 @@
 }
 
 /* Printing logic */
+/* Print isolation */
 .printable-bill {
   display: none;
 }
 
 @media print {
-  /* Hide EVERYTHING on the dashboard except the bill */
+  /* 1. Hide dashboard elements */
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
   
-  .printable-bill, .printable-bill * {
-    visibility: visible;
+  /* 2. Isolated Bill Container */
+  .printable-bill, 
+  .printable-bill * {
+    visibility: visible !important;
   }
 
   .printable-bill {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background: white;
-    padding: 0;
-    margin: 0;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Montserrat', sans-serif !important;
   }
 
-  /* Force standard black text for printing */
-  .printable-bill {
-    color: black !important;
-  }
-
+  /* 3. Professional Boutique Styling */
   .bill-page {
-    page-break-after: always;
-    padding: 40px;
-    border-bottom: 2px dashed #000;
+    page-break-after: always !important;
+    padding: 60px !important;
+    background: #ffffff !important;
   }
 
-  .bill-page:last-child {
-    border-bottom: none;
+  .bill-header {
+    text-align: center !important;
+    margin-bottom: 50px !important;
+    border-bottom: 2px solid #000 !important;
+    padding-bottom: 30px !important;
   }
 
-  /* Hide print buttons while printing */
-  .no-print {
-    display: none !important;
+  .bill-header h1 {
+    font-size: 3rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.3em !important;
+    text-transform: uppercase !important;
+    margin: 0 !important;
+    color: #000 !important;
+  }
+
+  .bill-header p {
+    font-size: 1rem !important;
+    letter-spacing: 0.1em !important;
+    margin-top: 10px !important;
+    color: #444 !important;
+  }
+
+  .bill-section {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    margin-bottom: 50px !important;
+    gap: 40px !important;
+  }
+
+  .bill-section p {
+    margin: 5px 0 !important;
+    line-height: 1.5 !important;
+  }
+
+  /* 4. Table Layout Fixes */
+  .bill-table {
+    display: table !important; /* Force correct table display */
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 30px !important;
+  }
+
+  .bill-table tr {
+    display: table-row !important;
+  }
+
+  .bill-table th, .bill-table td {
+    display: table-cell !important;
+    border-bottom: 1px solid #eee !important;
+    padding: 15px 10px !important;
+    text-align: left !important;
+    color: #000 !important;
+  }
+
+  .bill-table th {
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.1em !important;
+    background: #fdfdfd !important;
+    border-top: 1px solid #000 !important;
+    border-bottom: 2px solid #000 !important;
+  }
+
+  .bill-total {
+    margin-top: 50px !important;
+    text-align: right !important;
+    border-top: 1px solid #000 !important;
+    padding-top: 20px !important;
+  }
+
+  .bill-total-amount {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+    color: #000 !important;
+    margin-top: 10px !important;
   }
 }
 
-.bill-header {
-  border-bottom: 2px solid #000;
-  padding-bottom: 10px;
-  margin-bottom: 20px;
-  text-align: center;
+/* ─── Admin Layout Overhaul ─── */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
 }
 
-.bill-section {
-  margin-bottom: 20px;
+.light-theme {
+  --admin-bg: #f8fafc;
+  --admin-card: #ffffff;
+  --admin-sidebar: #1e293b;
+  --admin-text: #1e293b;
+  --admin-text-muted: #64748b;
+  --admin-border: #e2e8f0;
 }
 
-.bill-table {
+.dark-theme {
+  --admin-bg: #0f172a;
+  --admin-card: #1e293b;
+  --admin-sidebar: #020617;
+  --admin-text: #f8fafc;
+  --admin-text-muted: #94a3b8;
+  --admin-border: #334155;
+}
+
+.admin-layout {
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+.admin-sidebar {
+  width: 260px;
+  background: var(--admin-sidebar);
+  color: white;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  border-right: 1px solid var(--admin-border);
+}
+
+.sidebar-logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin-bottom: 2.5rem;
+  padding: 0 1rem;
+  color: #fff;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #94a3b8;
+  font-weight: 500;
+  border: none;
+  background: none;
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-.bill-table th, .bill-table td {
-  border: 1px solid #000;
-  padding: 8px;
   text-align: left;
 }
 
-.bill-table th {
-  background: #f2f2f2;
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
 }
 
-.bill-total {
-  text-align: right;
-  font-weight: bold;
-  font-size: 1.2rem;
-  margin-top: 20px;
+.sidebar-item.active {
+  background: #4f46e5;
+  color: #fff;
 }
+
+.admin-main-content {
+  flex: 1;
+  margin-left: 260px;
+  padding: 2.5rem;
+  max-width: 1400px;
+}
+
+.tab-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Update cards and sections to use variables */
+.admin-orders, .manage-categories-section, .add-product-section, .manage-products, 
+section[style*="background: white"], div[style*="background: white"] {
+  background: var(--admin-card) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-main-content h1, .admin-main-content h2, .admin-main-content h3, .admin-main-content h4 {
+  color: var(--admin-text) !important;
+}
+
+.admin-main-content p {
+  color: var(--admin-text-muted) !important;
+}
+
+/* Global Text Visibility for Dark Mode */
+.dark-theme h1, .dark-theme h2, .dark-theme h3, .dark-theme h4, .dark-theme h5, .dark-theme h6,
+.dark-theme span, .dark-theme strong, .dark-theme label, .dark-theme div, .dark-theme p:not(.admin-text-muted) {
+  color: var(--admin-text) !important;
+}
+
+.dark-theme .admin-text-muted, .dark-theme p, .dark-theme a:not([button]) {
+  color: var(--admin-text-muted) !important;
+}
+
+.dark-theme a {
+  color: var(--primary) !important;
+  text-decoration: none;
+}
+
+.dark-theme a:hover {
+  text-decoration: underline;
+}
+
+/* Ensure inputs and placeholders are handled */
+.dark-theme input, .dark-theme select, .dark-theme textarea {
+  background: var(--admin-card) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.dark-theme input::placeholder {
+  color: var(--admin-text-muted) !important;
+  opacity: 0.7;
+}
+
+.inventory-item h4, .inventory-item span, .category-card span, .admin-main-content h1, .admin-main-content h2, .admin-main-content h3, .admin-main-content h4, .admin-main-content span, .admin-main-content strong, .admin-main-content p {
+  color: var(--admin-text) !important;
+}
+
+/* Ensure sections in dashboard also follow theme */
+.admin-main-content section, .admin-main-content .admin-grid > div {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text);
+}
+
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    width: 80px;
+    padding: 2rem 0.5rem;
+  }
+  .sidebar-logo {
+    display: none;
+  }
+  .sidebar-item span {
+    display: none;
+  }
+  .admin-main-content {
+    margin-left: 80px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+  .admin-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    padding: 1rem;
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  .admin-main-content {
+    margin-left: 0;
+    padding: 1.5rem;
+  }
+}
+
+/* Hide storefront layout on Admin pages */
+body.admin-body .sticky-nav-wrapper,
+body.admin-body header.main-header,
+body.admin-body .announcement-bar,
+body.admin-body footer.main-footer,
+body.admin-body .floating-contact-btn {
+  display: none !important;
+}
+
+body.admin-body {
+  overflow-x: hidden;
+  background: #f8fafc;
+}
+
+body.admin-body main {
+  padding-top: 0 !important;
+}
+
+.order-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 50px;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  animation: pulseBadge 2s infinite;
+}
+
+.inventory-badge {
+  background: #6366f1;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 50px;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+  animation: floatBadge 3s infinite ease-in-out;
+}
+
+@keyframes floatBadge {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+
+.status-badge {
+  padding: 0.25rem 0.85rem !important;
+  border-radius: 50px !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.status-badge.verified {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+.status-badge.rejected {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.status-badge.pending {
+  background: #fef9c3 !important;
+  color: #854d0e !important;
+}
+
+@keyframes pulseBadge {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.weather-card {
+  animation: floatWeather 4s ease-in-out infinite;
+}
+
+@keyframes floatWeather {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Weather Icon Specific Animations */
+@keyframes weather-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 5px gold); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 15px orange); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 5px gold); }
+}
+
+@keyframes weather-float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes weather-rain {
+  0% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(4px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0.5; }
+}
+
+.weather-icon-sun { animation: weather-pulse 3s infinite ease-in-out; }
+.weather-icon-cloud { animation: weather-float 4s infinite ease-in-out; }
+.weather-icon-rain { animation: weather-rain 1s infinite ease-in-out; }
+.weather-icon-thunder { animation: weather-pulse 0.4s infinite alternate; }
+
+@keyframes moon-glow {
+  0% { transform: rotate(0deg); filter: drop-shadow(0 0 5px #f1f5f9); }
+  50% { transform: rotate(8deg); filter: drop-shadow(0 0 15px #f1f5f9); }
+  100% { transform: rotate(0deg); filter: drop-shadow(0 0 5px #f1f5f9); }
+}
+
+.weather-icon-moon { animation: moon-glow 4s infinite ease-in-out; }
+
+

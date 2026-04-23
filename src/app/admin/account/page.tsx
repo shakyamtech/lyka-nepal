@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import "../admin.css";
 
 export default function AccountDashboard() {
@@ -12,6 +13,40 @@ export default function AccountDashboard() {
   const [isMounted, setIsMounted] = useState(false);
   const [returnRequests, setReturnRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const router = useRouter();
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "auto">("auto");
+  const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('adminUser');
+    if (savedUser) {
+      const u = JSON.parse(savedUser);
+      // Only Admin or Super Admin can enter here
+      if (u.role === 'admin' || u.role === 'superadmin' || u.email === 'shakya.mahes@gmail.com') {
+        setCurrentUser(u);
+        setIsAuthChecking(false);
+      } else {
+        alert("Access Denied: You do not have permission to view the Accounting Suite.");
+        router.push("/admin");
+      }
+    } else {
+      router.push("/admin");
+    }
+
+    const savedMode = localStorage.getItem('adminThemeMode') as "light" | "dark" | "auto";
+    if (savedMode) setThemeMode(savedMode);
+  }, [router]);
+
+  useEffect(() => {
+    if (themeMode === "auto") {
+      const hour = new Date().getHours();
+      setEffectiveTheme(hour >= 18 || hour < 6 ? "dark" : "light");
+    } else {
+      setEffectiveTheme(themeMode);
+    }
+  }, [themeMode]);
 
   // Expense Form State
   const [expType, setExpType] = useState("EXPENSE");
@@ -291,27 +326,51 @@ export default function AccountDashboard() {
   const inventoryRetailValue = products.reduce((sum, p) => sum + (Number(p.stock) * Number(p.price || 0)), 0);
   const inventoryUnits = products.reduce((sum, p) => sum + Number(p.stock), 0);
 
+  if (isAuthChecking) return <div style={{ padding: "4rem", textAlign: "center" }}>Verifying Admin Access...</div>;
+  if (!currentUser) return null; // Router will redirect
+
   if (!isMounted) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading Accounting Suite...</div>;
 
-  return (
-    <div className="admin-container" style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-        <h1>LYKA Accounting Suite</h1>
-        <Link href="/admin"><button className="action-btn" style={{ background: "#333", color: "white" }}>&larr; Back to Admin</button></Link>
-      </header>
+  const toggleTheme = () => {
+    let next: "light" | "dark" | "auto";
+    if (themeMode === "light") next = "dark";
+    else if (themeMode === "dark") next = "auto";
+    else next = "light";
+    setThemeMode(next);
+    localStorage.setItem('adminThemeMode', next);
+  };
 
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "1px solid #ccc", paddingBottom: "1rem" }}>
+  const themeLabel = themeMode === "light" ? "☀️ Light" : themeMode === "dark" ? "🌙 Dark" : "🕒 Auto";
+
+  return (
+    <div className={`${effectiveTheme}-theme`} style={{ background: "var(--admin-bg)", color: "var(--admin-text)", minHeight: "100vh" }}>
+      <div className="admin-container" style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+          <h1 style={{ color: 'var(--admin-text)' }}>LYKA Accounting Suite</h1>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button 
+              onClick={toggleTheme}
+              style={{ padding: "0.5rem 1rem", borderRadius: "50px", background: "var(--admin-card)", border: "1px solid var(--admin-border)", color: "var(--admin-text)", cursor: "pointer", fontWeight: "bold" }}
+            >
+              {themeLabel} Mode
+            </button>
+            <Link href="/admin"><button className="action-btn" style={{ background: "var(--admin-sidebar)", color: "white" }}>&larr; Back to Admin</button></Link>
+          </div>
+        </header>
+
+      <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "1px solid var(--admin-border)", paddingBottom: "1rem" }}>
         {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
               padding: "0.8rem 1.5rem",
-              background: activeTab === tab ? (tab === "RETURNS" ? "#dc2626" : "black") : "transparent",
-              color: activeTab === tab ? "white" : (tab === "RETURNS" ? "#dc2626" : "black"),
-              border: `1px solid ${tab === "RETURNS" ? "#dc2626" : "black"}`,
+              background: activeTab === tab ? (tab === "RETURNS" ? "#dc2626" : "var(--admin-text)") : "transparent",
+              color: activeTab === tab ? (effectiveTheme === 'dark' ? "var(--admin-bg)" : "white") : (tab === "RETURNS" ? "#dc2626" : "var(--admin-text)"),
+              border: `1px solid ${tab === "RETURNS" ? "#dc2626" : "var(--admin-border)"}`,
               fontWeight: "bold",
-              cursor: "pointer"
+              cursor: "pointer",
+              borderRadius: "4px"
             }}
           >
             {tab === "RETURNS" ? "↩ RETURNS" : tab.replace("_", " ")}
@@ -327,8 +386,8 @@ export default function AccountDashboard() {
               <button type="button" onClick={() => { setExpType("INCOME"); setExpCategory("Offline Sale"); }} style={{ flex: 1, padding: "0.8rem", background: expType === "INCOME" ? "green" : "#eee", color: expType === "INCOME" ? "white" : "black", border: "1px solid #ccc", cursor: "pointer", fontWeight: "bold" }}>+ Income</button>
               <button type="button" onClick={() => { setExpType("EXPENSE"); setExpCategory("Marketing"); }} style={{ flex: 1, padding: "0.8rem", background: expType === "EXPENSE" ? "red" : "#eee", color: expType === "EXPENSE" ? "white" : "black", border: "1px solid #ccc", cursor: "pointer", fontWeight: "bold" }}>- Expense</button>
             </div>
-            <form onSubmit={handleAddExpense} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "0.5rem", background: "#f9f9f9", padding: "1.5rem", border: "1px solid #e0e0e0" }}>
-              <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} required style={{ padding: "0.8rem" }}>
+              <form onSubmit={handleAddExpense} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "0.5rem", background: "var(--admin-card)", padding: "1.5rem", border: "1px solid var(--admin-border)", color: "var(--admin-text)" }}>
+                <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} required style={{ padding: "0.8rem", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }}>
                 {expType === "EXPENSE" ? (
                   <>
                     <option value="Marketing">Marketing / Ads</option>
@@ -352,11 +411,11 @@ export default function AccountDashboard() {
               <button type="submit" style={{ background: "black", color: "white", padding: "1rem", fontWeight: "bold", cursor: "pointer", border: "none" }}>SAVE ENTRY</button>
             </form>
 
-            <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid #ccc", background: "white" }}>
+            <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid var(--admin-border)", background: "var(--admin-card)", color: "var(--admin-text)", borderRadius: "8px" }}>
               <h4>Today's Summary</h4>
-              <p>Cash Inflow: <strong style={{ color: "green" }}>Rs.{totalDailyInflow.toLocaleString()}</strong></p>
-              <p>Cash Outflow: <strong style={{ color: "red" }}>Rs.{todaysExpensesAmount.toLocaleString()}</strong></p>
-              <hr style={{ margin: "1rem 0" }} />
+              <p>Cash Inflow: <strong style={{ color: "#10b981" }}>Rs.{totalDailyInflow.toLocaleString()}</strong></p>
+              <p>Cash Outflow: <strong style={{ color: "#ef4444" }}>Rs.{todaysExpensesAmount.toLocaleString()}</strong></p>
+              <hr style={{ margin: "1rem 0", borderColor: "var(--admin-border)" }} />
               <p>Net Daily Position: <strong>Rs.{(totalDailyInflow - todaysExpensesAmount).toLocaleString()}</strong></p>
             </div>
           </div>
@@ -418,7 +477,7 @@ export default function AccountDashboard() {
       )}
 
       {activeTab === "P&L" && (
-        <div style={{ background: "white", padding: "3rem", border: "1px solid #e0e0e0", maxWidth: "800px" }}>
+        <div style={{ background: "var(--admin-card)", color: "var(--admin-text)", padding: "3rem", border: "1px solid var(--admin-border)", maxWidth: "800px" }}>
           <h2>Profit & Loss Statement (All Time)</h2>
           <hr style={{ margin: "2rem 0" }} />
 
@@ -469,7 +528,7 @@ export default function AccountDashboard() {
                   const revenue = Number(o.total || 0);
                   const margin = revenue - cogs;
                   return (
-                    <tr key={i} style={{ borderBottom: "1px solid #eee", background: i % 2 === 0 ? "#fafafa" : "white" }}>
+                    <tr key={i} style={{ borderBottom: "1px solid var(--admin-border)", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
                       <td style={{ padding: "0.7rem 1rem" }}>{o.customerName || "—"}</td>
                       <td style={{ padding: "0.7rem 1rem", color: "#666" }}>{o.date ? new Date(o.date).toLocaleDateString() : "—"}</td>
                       <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {revenue.toLocaleString()}</td>
@@ -498,8 +557,8 @@ export default function AccountDashboard() {
 
       {activeTab === "BALANCE_SHEET" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem" }}>
-          <div style={{ border: "2px solid black", padding: "2rem" }}>
-            <h2 style={{ borderBottom: "1px solid #ccc", paddingBottom: "1rem" }}>Assets</h2>
+          <div style={{ border: "2px solid var(--admin-border)", padding: "2rem", background: "var(--admin-card)" }}>
+            <h2 style={{ borderBottom: "1px solid var(--admin-border)", paddingBottom: "1rem", color: "var(--admin-text)" }}>Assets</h2>
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between" }}>
               <span>Total Cash & Revenue Generated</span>
               <strong>Rs. {(totalSalesRevenue + totalOtherIncome).toLocaleString()}</strong>
@@ -514,8 +573,8 @@ export default function AccountDashboard() {
               <span>Rs. {(totalSalesRevenue + totalOtherIncome + inventoryCostValue).toLocaleString()}</span>
             </div>
           </div>
-          <div style={{ border: "2px solid #ccc", padding: "2rem", background: "#fafafa" }}>
-            <h2 style={{ borderBottom: "1px solid #ccc", paddingBottom: "1rem", color: "gray" }}>Liabilities & Equity</h2>
+          <div style={{ border: "2px solid var(--admin-border)", padding: "2rem", background: "var(--admin-card)" }}>
+            <h2 style={{ borderBottom: "1px solid var(--admin-border)", paddingBottom: "1rem", color: "var(--admin-text-muted)" }}>Liabilities & Equity</h2>
             <p style={{ marginTop: "1rem", color: "gray" }}>No external liabilities recorded in e-commerce system.</p>
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
               <span>Owner's Equity (Net Worth)</span>
@@ -532,25 +591,25 @@ export default function AccountDashboard() {
               <p>Total Items in Warehouse</p>
               <h2>{inventoryUnits} Units</h2>
             </div>
-            <div style={{ padding: "1.5rem", background: "#f4f4f4", border: "1px solid #ccc", flex: 1 }}>
-              <p>Capital Locked (Cost Value)</p>
-              <h2 style={{ color: "red" }}>Rs. {inventoryCostValue.toLocaleString()}</h2>
+            <div style={{ padding: "1.5rem", background: "var(--admin-card)", border: "1px solid var(--admin-border)", flex: 1, borderRadius: "8px" }}>
+              <p style={{ color: "var(--admin-text-muted)" }}>Capital Locked (Cost Value)</p>
+              <h2 style={{ color: "#ef4444" }}>Rs. {inventoryCostValue.toLocaleString()}</h2>
             </div>
-            <div style={{ padding: "1.5rem", background: "#e8f5e9", border: "1px solid #4caf50", flex: 1 }}>
-              <p>Potential Revenue (Retail Value)</p>
-              <h2 style={{ color: "green" }}>Rs. {inventoryRetailValue.toLocaleString()}</h2>
+            <div style={{ padding: "1.5rem", background: "var(--admin-card)", border: "1px solid var(--admin-border)", flex: 1, borderRadius: "8px" }}>
+              <p style={{ color: "var(--admin-text-muted)" }}>Potential Revenue (Retail Value)</p>
+              <h2 style={{ color: "#10b981" }}>Rs. {inventoryRetailValue.toLocaleString()}</h2>
             </div>
           </div>
 
-          <table style={{ width: "100%", borderCollapse: "collapse", background: "white", border: "1px solid #ccc" }}>
-            <thead style={{ background: "#f4f4f4" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--admin-card)", border: "1px solid var(--admin-border)", color: "var(--admin-text)" }}>
+            <thead style={{ background: "var(--admin-bg)" }}>
               <tr>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ccc", textAlign: "left" }}>Product</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ccc" }}>Stock</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ccc" }}>Unit Cost</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ccc" }}>Unit Price</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ccc", background: "#fee2e2" }}>Total Cost Vol.</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ccc", background: "#dcfce7" }}>Retail Potential</th>
+                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)", textAlign: "left" }}>Product</th>
+                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Stock</th>
+                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Unit Cost</th>
+                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Unit Price</th>
+                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)", background: effectiveTheme === 'dark' ? '#450a0a' : '#fee2e2', color: effectiveTheme === 'dark' ? '#fecaca' : '#b91c1c' }}>Total Cost Vol.</th>
+                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)", background: effectiveTheme === 'dark' ? '#064e3b' : '#dcfce7', color: effectiveTheme === 'dark' ? '#a7f3d0' : '#15803d' }}>Retail Potential</th>
               </tr>
             </thead>
             <tbody>
@@ -573,30 +632,30 @@ export default function AccountDashboard() {
         <div style={{ maxWidth: "900px" }}>
           {/* Pending Requests Section */}
           <div style={{ marginBottom: "3rem" }}>
-            <h2 style={{ borderBottom: "2px solid black", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>📋 Pending Customer Return Requests</h2>
+            <h2 style={{ borderBottom: "2px solid var(--admin-text)", paddingBottom: "0.5rem", marginBottom: "1.5rem", color: "var(--admin-text)" }}>📋 Pending Customer Return Requests</h2>
 
             {returnRequests.filter(r => r.status === 'PENDING').length === 0 ? (
-              <p style={{ color: "#999", fontStyle: "italic", padding: "2rem", background: "#f9f9f9", textAlign: "center", border: "1px dashed #ccc" }}>
+              <p style={{ color: "var(--admin-text-muted)", fontStyle: "italic", padding: "2rem", background: "var(--admin-bg)", textAlign: "center", border: "1px dashed var(--admin-border)", borderRadius: "8px" }}>
                 No pending return requests from customers.
               </p>
             ) : (
               <div style={{ display: "grid", gap: "1rem" }}>
                 {returnRequests.filter(r => r.status === 'PENDING').map((req) => (
-                  <div key={req.id} style={{ background: "#fff", border: "1px solid #e0e0e0", padding: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={req.id} style={{ background: "var(--admin-card)", border: "1px solid var(--admin-border)", color: "var(--admin-text)", padding: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: "8px" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", gap: "1rem", alignItems: "baseline", marginBottom: "0.5rem" }}>
                         <span style={{ fontWeight: "800", fontSize: "1.1rem" }}>{req.customer_name}</span>
-                        <span style={{ color: "#666", fontSize: "0.85rem" }}>{req.customer_phone}</span>
-                        <span style={{ color: "#999", fontSize: "0.8rem" }}>{new Date(req.created_at).toLocaleDateString()}</span>
+                        <span style={{ color: "var(--admin-text-muted)", fontSize: "0.85rem" }}>{req.customer_phone}</span>
+                        <span style={{ color: "var(--admin-text-muted)", fontSize: "0.8rem", opacity: 0.7 }}>{new Date(req.created_at).toLocaleDateString()}</span>
                       </div>
                       <div style={{ marginBottom: "0.5rem" }}>
-                        <strong style={{ color: "#dc2626" }}>Product: </strong>
+                        <strong style={{ color: "#ef4444" }}>Product: </strong>
                         <span>{req.product_name} (x{req.quantity})</span>
                         {(() => {
                           const prod = products.find(p => p.id?.toString() === req.product_id?.toString() || p.id === req.product_id);
                           if (prod) {
                             return (
-                              <span style={{ marginLeft: "0.5rem", color: "#16a34a", fontWeight: "bold", fontSize: "0.85rem" }}>
+                              <span style={{ marginLeft: "0.5rem", color: "#10b981", fontWeight: "bold", fontSize: "0.85rem" }}>
                                 [Sold for: NPR {(prod.price * (req.quantity || 1)).toLocaleString()}]
                               </span>
                             );
@@ -606,79 +665,54 @@ export default function AccountDashboard() {
                       </div>
                       <div>
                         <strong>Reason: </strong>
-                        <span style={{ color: "#666", fontSize: "0.9rem" }}>{req.reason || "No reason provided"}</span>
+                        <span style={{ color: "var(--admin-text-muted)", fontSize: "0.9rem" }}>{req.reason || "No reason provided"}</span>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: "0.8rem", position: "relative", zIndex: 10, alignItems: "center" }}>
                       {approvingReqId === req.id ? (
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.4rem" }}>
-                          {(() => {
-                            const prod = products.find(p => p.id?.toString() === req.product_id?.toString() || p.id === req.product_id);
-                            if (prod) {
-                              return <span style={{ fontSize: "0.7rem", color: "#666", fontWeight: "bold" }}>REF: NPR {(prod.price * (req.quantity || 1)).toLocaleString()}</span>;
-                            }
-                            return null;
-                          })()}
-                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", background: "#f0fdf4", padding: "0.5rem", borderRadius: "4px", border: "1px solid #16a34a" }}>
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", background: effectiveTheme === 'dark' ? '#064e3b' : '#f0fdf4', padding: "0.5rem", borderRadius: "4px", border: "1px solid #10b981" }}>
                             <input
                               type="number"
-                            placeholder="Refund Amt (Rs.)"
-                            value={tempRefundAmt}
-                            onChange={(e) => setTempRefundAmt(e.target.value)}
-                            style={{ width: "120px", padding: "0.4rem", border: "1px solid #16a34a", borderRadius: "2px" }}
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleApproveReturn(req)}
-                            disabled={retLoading}
-                            style={{ background: "#16a34a", color: "white", border: "none", padding: "0.4rem 0.8rem", fontWeight: "bold", cursor: "pointer", borderRadius: "2px", fontSize: "0.8rem" }}
-                          >
-                            {retLoading ? "..." : "CONFIRM"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setApprovingReqId(null); setTempRefundAmt(""); }}
-                            style={{ background: "transparent", color: "#666", border: "none", padding: "0.4rem", cursor: "pointer", fontSize: "1.2rem", lineHeight: 1 }}
-                            title="Cancel"
-                          >
-                            ×
-                          </button>
+                              placeholder="Refund Amt"
+                              value={tempRefundAmt}
+                              onChange={(e) => setTempRefundAmt(e.target.value)}
+                              style={{ width: "120px", padding: "0.4rem", border: "1px solid #10b981", borderRadius: "4px", background: 'var(--admin-card)', color: 'var(--admin-text)' }}
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleApproveReturn(req)}
+                              disabled={retLoading}
+                              style={{ background: "#10b981", color: "white", border: "none", padding: "0.4rem 0.8rem", fontWeight: "bold", cursor: "pointer", borderRadius: "4px", fontSize: "0.8rem" }}
+                            >
+                              {retLoading ? "..." : "CONFIRM"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setApprovingReqId(null); setTempRefundAmt(""); }}
+                              style={{ background: "transparent", color: "var(--admin-text-muted)", border: "none", padding: "0.4rem", cursor: "pointer", fontSize: "1.2rem", lineHeight: 1 }}
+                              title="Cancel"
+                            >
+                              ×
+                            </button>
                           </div>
                         </div>
                       ) : (
                         <>
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setApprovingReqId(req.id);
-                            }}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setApprovingReqId(req.id); }}
                             disabled={retLoading}
-                            style={{
-                              background: "#16a34a", color: "white", border: "none",
-                              padding: "0.6rem 1.2rem", fontWeight: "bold",
-                              cursor: retLoading ? "not-allowed" : "pointer",
-                              borderRadius: "4px"
-                            }}
+                            style={{ background: "#10b981", color: "white", border: "none", padding: "0.6rem 1.2rem", fontWeight: "bold", cursor: "pointer", borderRadius: "8px" }}
                           >
                             APPROVE
                           </button>
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleRejectReturn(req.id);
-                            }}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRejectReturn(req.id); }}
                             disabled={retLoading}
-                            style={{
-                              background: "transparent", color: "#dc2626", border: "1px solid #dc2626",
-                              padding: "0.6rem 1.2rem", fontWeight: "bold",
-                              cursor: retLoading ? "not-allowed" : "pointer",
-                              borderRadius: "4px"
-                            }}
+                            style={{ background: "transparent", color: "#ef4444", border: "1px solid #ef4444", padding: "0.6rem 1.2rem", fontWeight: "bold", cursor: "pointer", borderRadius: "8px" }}
                           >
                             REJECT
                           </button>
@@ -690,15 +724,41 @@ export default function AccountDashboard() {
               </div>
             )}
 
-            {/* Recently Processed Requests (Optional overview) */}
+            {/* Recently Processed Requests */}
             {returnRequests.filter(r => r.status !== 'PENDING').length > 0 && (
               <div style={{ marginTop: "2rem" }}>
-                <h4 style={{ color: "#666", marginBottom: "1rem" }}>History (Approved/Rejected)</h4>
-                <div style={{ display: "grid", gap: "0.5rem", opacity: 0.6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h4 style={{ color: "var(--admin-text-muted)", margin: 0 }}>History (Approved/Rejected)</h4>
+                  <button 
+                    onClick={async () => {
+                      if (window.confirm("⚠️ ARE YOU SURE? This will permanently delete ALL Approved and Rejected return records from your history. This action cannot be undone.")) {
+                        const res = await fetch('/api/returns?clearHistory=true', { method: 'DELETE' });
+                        if (res.ok) fetchData();
+                        else alert("Failed to clear history.");
+                      }
+                    }}
+                    style={{ 
+                      background: 'none', 
+                      border: '1px solid #ef4444', 
+                      color: '#ef4444', 
+                      padding: '0.4rem 0.8rem', 
+                      borderRadius: '4px', 
+                      fontSize: '0.75rem', 
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    🗑️ Clear All History
+                  </button>
+                </div>
+                <div style={{ display: "grid", gap: "0.5rem" }}>
                   {returnRequests.filter(r => r.status !== 'PENDING').slice(0, 5).map((req) => (
-                    <div key={req.id} style={{ fontSize: "0.85rem", display: "flex", justifyContent: "space-between", background: "#f5f5f5", padding: "0.5rem 1rem" }}>
-                      <span>{req.customer_name} — {req.product_name}</span>
-                      <strong style={{ color: req.status === 'APPROVED' ? 'green' : 'red' }}>{req.status}</strong>
+                    <div key={req.id} style={{ fontSize: "0.85rem", display: "flex", justifyContent: "space-between", background: "var(--admin-card)", padding: "0.6rem 1rem", border: "1px solid var(--admin-border)", borderRadius: "4px", opacity: 0.8 }}>
+                      <span style={{ color: "var(--admin-text)" }}>{req.customer_name} — {req.product_name}</span>
+                      <strong style={{ color: req.status === 'APPROVED' ? '#10b981' : '#ef4444' }}>{req.status}</strong>
                     </div>
                   ))}
                 </div>
@@ -706,20 +766,20 @@ export default function AccountDashboard() {
             )}
           </div>
 
-          <div style={{ background: "#fff5f5", border: "2px solid #dc2626", padding: "2rem", borderRadius: "4px", marginBottom: "2rem" }}>
-            <h2 style={{ color: "#dc2626", borderBottom: "1px solid #fca5a5", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>↩ Customer Return / Refund</h2>
-            <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
-              Select the returned product. This will <strong>restock the inventory</strong> and <strong>log the refund as an Expense</strong> in your ledger — making your balance sheet more accurate.
+          <div style={{ background: effectiveTheme === 'dark' ? 'rgba(239, 68, 68, 0.05)' : '#fff5f5', border: "1px solid #ef4444", padding: "2rem", borderRadius: "12px", marginBottom: "2rem" }}>
+            <h2 style={{ color: "#ef4444", borderBottom: "1px solid rgba(239, 68, 68, 0.2)", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>↩ Customer Return / Refund</h2>
+            <p style={{ color: "var(--admin-text-muted)", fontSize: "0.95rem", marginBottom: "1.5rem" }}>
+              Select the returned product. This will <strong>restock the inventory</strong> and <strong>log the refund as an Expense</strong> in your ledger.
             </p>
-            <form onSubmit={handleReturn} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <form onSubmit={handleReturn} style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
 
               <div>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Product Returned</label>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--admin-text)" }}>Product Returned</label>
                 <select
                   value={retProductId}
                   onChange={e => setRetProductId(e.target.value)}
                   required
-                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem" }}
+                  style={{ width: "100%", padding: "0.8rem", border: "1px solid var(--admin-border)", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
                 >
                   <option value="">— Select Product —</option>
                   {products.map((p: any) => (
@@ -732,68 +792,60 @@ export default function AccountDashboard() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Quantity Returned</label>
+                  <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--admin-text)" }}>Quantity Returned</label>
                   <input
                     type="number" min="1"
                     value={retQty}
                     onChange={e => setRetQty(e.target.value)}
                     required
-                    style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }}
+                    style={{ width: "100%", padding: "0.8rem", border: "1px solid var(--admin-border)", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Refund Amount (Rs.)</label>
+                  <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--admin-text)" }}>Refund Amount (Rs.)</label>
                   <input
                     type="number" min="0"
                     value={retAmount}
                     onChange={e => setRetAmount(e.target.value)}
                     required placeholder="0"
-                    style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }}
+                    style={{ width: "100%", padding: "0.8rem", border: "1px solid var(--admin-border)", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem" }}>Note (optional)</label>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--admin-text)" }}>Note (optional)</label>
                 <input
                   type="text"
                   value={retNote}
                   onChange={e => setRetNote(e.target.value)}
                   placeholder="e.g. Wrong size, defect..."
-                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #ccc", fontSize: "0.95rem", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "0.8rem", border: "1px solid var(--admin-border)", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
                 />
               </div>
 
-              <div style={{ border: "1px dashed #dc2626", padding: "1rem", borderRadius: "4px", background: "#fef2f2" }}>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem", fontSize: "0.85rem", color: "#dc2626" }}>Cleanup Order History (Optional)</label>
+              <div style={{ border: "1px dashed #ef4444", padding: "1.2rem", borderRadius: "8px", background: effectiveTheme === 'dark' ? 'rgba(239, 68, 68, 0.03)' : '#fef2f2' }}>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "#ef4444" }}>Cleanup Order History (Optional)</label>
                 <input
                   type="text"
                   value={cleanupPhone}
                   onChange={e => setCleanupPhone(e.target.value)}
                   placeholder="Enter Customer Phone to delete their order record"
-                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #dc2626", fontSize: "0.95rem", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #ef4444", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
                 />
-                <p style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.4rem" }}>
-                  💡 Use this to remove the original "Income" from your Daybook so the balance matches.
+                <p style={{ fontSize: "0.8rem", color: "var(--admin-text-muted)", marginTop: "0.6rem", opacity: 0.8 }}>
+                  💡 This removes the original "Income" record from your Daybook.
                 </p>
               </div>
-
-              {retProductId && (
-                <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", padding: "1rem", borderRadius: "4px", fontSize: "0.85rem" }}>
-                  <strong>Preview:</strong><br />
-                  📦 Restock: <em>{products.find((p: any) => p.id.toString() === retProductId)?.name}</em> +{retQty} units<br />
-                  💸 Log Expense: Rs. {retAmount || "0"} as "Refund Paid"
-                </div>
-              )}
 
               <button
                 type="submit"
                 disabled={retLoading}
                 style={{
-                  padding: "1rem", background: retLoading ? "#ccc" : "#dc2626",
-                  color: "white", border: "none", fontWeight: "bold",
+                  padding: "1.2rem", background: retLoading ? "var(--admin-border)" : "#ef4444",
+                  color: "white", border: "none", fontWeight: "bold", borderRadius: "8px",
                   fontSize: "1rem", cursor: retLoading ? "not-allowed" : "pointer",
-                  letterSpacing: "0.05em"
+                  letterSpacing: "0.05em", marginTop: "0.5rem", boxShadow: "0 4px 15px rgba(239, 68, 68, 0.2)"
                 }}
               >
                 {retLoading ? "Processing..." : "↩ PROCESS RETURN"}
@@ -802,6 +854,12 @@ export default function AccountDashboard() {
           </div>
         </div>
       )}
+        {/* Admin Footer */}
+        <footer style={{ marginTop: '4rem', padding: '2rem 0', textAlign: 'center', borderTop: '1px solid var(--admin-border)', color: 'var(--admin-text-muted)', fontSize: '0.8rem', opacity: 0.6 }}>
+          <p>&copy; {new Date().getFullYear()} LYKA Admin Suite • Accounting & Finance Edition</p>
+          <p style={{ marginTop: '0.5rem' }}>Secure Financial Environment</p>
+        </footer>
+      </div>
     </div>
   );
 }

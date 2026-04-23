@@ -48,3 +48,27 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+// DELETE: Clear history or delete specific request
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    const clearHistory = searchParams.get('clearHistory');
+
+    if (id) {
+      const { error } = await supabaseAdmin.from("return_requests").delete().eq("id", id);
+      if (error) throw error;
+    } else if (clearHistory === 'true') {
+      // Only delete processed history, keep PENDING ones
+      const { error } = await supabaseAdmin.from("return_requests").delete().neq("status", "PENDING");
+      if (error) throw error;
+    } else {
+      return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

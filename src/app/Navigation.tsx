@@ -11,6 +11,7 @@ export default function Navigation() {
   const [cartCount, setCartCount] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
   const [adminUnreadCount, setAdminUnreadCount] = useState(0);
+  const [categories, setCategories] = useState<any[]>([]);
   const playedSoundsRef = useRef<Set<number>>(new Set());
   const lastSoundTimeRef = useRef<number>(0);
 
@@ -103,6 +104,14 @@ export default function Navigation() {
   }, []);
 
   useEffect(() => {
+    fetch("/api/categories")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setCategories(data);
+      });
+  }, []);
+
+  useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -143,9 +152,11 @@ export default function Navigation() {
 
           {/* Desktop Nav */}
           <nav className="main-nav desktop-only">
-            <Link href="/?category=Clothes#collection">Clothes</Link>
-            <Link href="/?category=Bags%20%26%20Accessories#collection">Bags & Accessories</Link>
-            <Link href="/?category=Shoes#collection">Shoes</Link>
+            {categories.map(cat => (
+              <Link key={cat.id} href={`/?category=${encodeURIComponent(cat.name)}#collection`}>
+                {cat.name}
+              </Link>
+            ))}
           </nav>
 
           <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', width: "200px", justifyContent: "flex-end" }}>
@@ -220,9 +231,11 @@ export default function Navigation() {
           <button className="close-menu" onClick={closeMenu}>&times;</button>
         </div>
         <nav className="side-nav">
-          <Link href="/?category=Clothes#collection" onClick={closeMenu}>Clothes</Link>
-          <Link href="/?category=Bags%20%26%20Accessories#collection" onClick={closeMenu}>Bags & Accessories</Link>
-          <Link href="/?category=Shoes#collection" onClick={closeMenu}>Shoes</Link>
+          {categories.map(cat => (
+            <Link key={cat.id} href={`/?category=${encodeURIComponent(cat.name)}#collection`} onClick={closeMenu}>
+              {cat.name}
+            </Link>
+          ))}
           <div className="side-nav-footer">
             <Link href="/#cart" className="cart-link" onClick={closeMenu}>🛍 Bag ({cartCount})</Link>
           </div>

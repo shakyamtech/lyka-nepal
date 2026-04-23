@@ -8,7 +8,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabaseAdmin
       .from('admins')
-      .select('id, email, role')
+      .select('id, email, role, display_name')
       .eq('email', email)
       .eq('password', password)
       .single();
@@ -17,7 +17,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    return NextResponse.json({ success: true, user: data }, { status: 200 });
+    const safeUser = {
+      id: data.id,
+      email: data.email,
+      role: data.role,
+      displayName: data.display_name
+    };
+
+    return NextResponse.json({ success: true, user: safeUser }, { status: 200 });
   } catch (error) {
     console.error("Login err:", error);
     return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });

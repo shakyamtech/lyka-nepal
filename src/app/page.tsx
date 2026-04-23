@@ -16,6 +16,7 @@ function HomeContent() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [selectedSizes, setSelectedSizes] = useState<{[key: number]: string}>({});
   const [showAll, setShowAll] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
   
   const searchParams = useSearchParams();
   
@@ -39,6 +40,14 @@ function HomeContent() {
       sliderRef.current.scrollBy({ left: 350, behavior: 'smooth' });
     }
   };
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setCategories(data);
+      });
+  }, []);
 
   // New QR flow states
   const [showQR, setShowQR] = useState(false);
@@ -399,16 +408,18 @@ function HomeContent() {
         <div id="collection" style={{ paddingTop: '2rem' }}>
           <div className="section-header" style={{ marginBottom: '2rem' }}>
             <h2>Our Collection</h2>
-            <span style={{ fontSize: '0.82rem', color: '#999', fontStyle: 'italic' }}>Clothes · Bags &amp; Accessories · Shoes</span>
+            <span style={{ fontSize: '0.82rem', color: '#999', fontStyle: 'italic' }}>
+              {categories.map(c => c.name).join(' · ')}
+            </span>
           </div>
 
           <div className="catalog-filters" style={{ marginBottom: '2rem' }}>
             <div className="filter-group">
-              {["All", "Clothes", "Bags & Accessories", "Shoes"].map(cat => (
+              {["All", ...categories.map(c => c.name)].map(cat => (
                 <button
                   key={cat}
-                  onClick={() => setCategoryFilter(cat === "Bags & Accessories" ? "Bags" : cat)}
-                  className={`filter-btn ${categoryFilter === (cat === "Bags & Accessories" ? "Bags" : cat) ? "active" : ""}`}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`filter-btn ${categoryFilter === cat ? "active" : ""}`}
                 >
                   {cat}
                 </button>
@@ -448,27 +459,22 @@ function HomeContent() {
 
         {/* Individual Category Sliders */}
         <div className="container" style={{ marginTop: '2rem' }}>
-          {[
-            { title: "Clothes", cat: "Clothes" },
-            { title: "Bags & Accessories", cat: "Bags" },
-            { title: "Shoes", cat: "Shoes" }
-          ].map((item) => {
-            const catProducts = products.filter(p => p.category === item.cat);
+          {categories.map((item) => {
+            const catProducts = products.filter(p => p.category === item.name);
             if (catProducts.length === 0) return null;
             
             return (
-              <div key={item.cat} style={{ marginTop: '5rem', marginBottom: '4rem' }}>
+              <div key={item.name} style={{ marginTop: '5rem', marginBottom: '4rem' }}>
                 <div className="section-header" style={{ marginBottom: '1.5rem' }}>
-                  <h2>{item.title}</h2>
+                  <h2>{item.name}</h2>
                 </div>
                 <div className="slider-wrapper">
-                  <CategoryScroll products={catProducts} category={item.cat} />
+                  <CategoryScroll products={catProducts} category={item.name} />
                 </div>
                 
-                {/* Centered View All Button below each slider */}
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3rem' }}>
                   <Link 
-                    href={`/?category=${item.cat}#collection`}
+                    href={`/?category=${encodeURIComponent(item.name)}#collection`}
                     className="view-all-btn"
                   >
                     VIEW ALL
