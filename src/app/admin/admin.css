@@ -439,8 +439,8 @@ section[style*="background: white"], div[style*="background: white"] {
 }
 
 .admin-phone-link {
-  color: #3b82f6 !important;
-  text-decoration: none !important;
+  color: var(--admin-text) !important;
+  text-decoration: underline !important;
 }
 .admin-phone-link:hover {
   text-decoration: underline !important;
