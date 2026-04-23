@@ -1163,7 +1163,7 @@ export default function AdminPage() {
               <h2>Customer Orders & Payments</h2>
               <p style={{ marginBottom: "1.5rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>Review uploaded payment screenshots and verify orders to deduct inventory stock.</p>
 
-              <div style={{ marginBottom: "2rem", display: "flex", gap: "1rem", alignItems: "center" }}>
+              <div className="order-controls" style={{ marginBottom: "2rem", display: "flex", gap: "1rem", alignItems: "center" }}>
                 <div style={{ flex: 1, display: "flex", gap: "1rem" }}>
                   <input
                     type="text"
@@ -1182,8 +1182,9 @@ export default function AdminPage() {
                   )}
                 </div>
                 <button 
+                  className="print-all-btn"
                   onClick={handlePrintAll}
-                  style={{ padding: "0.8rem 1.5rem", background: "#6366f1", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}
+                  style={{ padding: "0.8rem 1.5rem", background: "#6366f1", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold", whiteSpace: "nowrap" }}
                 >
                   🖨️ Print All Verified
                 </button>
