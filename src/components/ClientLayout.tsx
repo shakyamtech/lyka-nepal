@@ -5,6 +5,7 @@ import Navigation from "../app/Navigation";
 import FloatingContact from "../app/FloatingContact";
 import SiteLogo from "../app/SiteLogo";
 import Link from "next/link";
+import NepaliDate from "nepali-date-converter";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -82,7 +83,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <span style={{ fontSize: '0.8rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Bank Transfer</span>
             </div>
           </div>
-          <p>&copy; {new Date().getFullYear()} LYKA Nepal. All rights reserved. Premium Fashion for the Modern Woman.</p>
+          <p>&copy; {new Date().getFullYear()} ({new NepaliDate().getYear()} BS) LYKA Nepal. All rights reserved. Premium Fashion for the Modern Woman.</p>
         </div>
       </footer>
     </>

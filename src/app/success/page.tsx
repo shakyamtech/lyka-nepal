@@ -49,7 +49,7 @@ function ReceiptContent() {
 
   useEffect(() => {
     const adDate = new Date();
-    setDateStr(`${adDate.toLocaleDateString()} (${new NepaliDate(adDate).format('DD MMMM YYYY')} BS)`);
+    setDateStr(`${adDate.toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} (${new NepaliDate(adDate).format('DD MMMM YYYY')} BS)`);
     if (orderId) {
       fetch(`/api/orders/check?id=${orderId}`)
         .then(res => res.json())

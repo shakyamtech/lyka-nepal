@@ -968,7 +968,7 @@ export default function AdminPage() {
                    </h3>
                    {notifications.slice(0, 5).map((n, i) => (
                      <div key={i} style={{ fontSize: "0.9rem", padding: "0.8rem 0", borderBottom: i !== Math.min(4, notifications.length - 1) ? "1px solid var(--admin-border)" : "none", color: 'var(--admin-text)' }}>
-                       <strong style={{ color: 'var(--admin-text-muted)' }}>{new Date(n.timestamp).toLocaleTimeString()}:</strong> {n.message}
+                       <strong style={{ color: 'var(--admin-text-muted)' }}>{new Date(n.timestamp).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(n.timestamp)).format('DD MMMM YYYY')} BS):</strong> {n.message}
                      </div>
                    ))}
                    {notifications.length > 5 && <p style={{ fontSize: '0.8rem', color: 'var(--admin-text-muted)', marginTop: '0.8rem' }}>+ {notifications.length - 5} more notifications...</p>}
@@ -1219,7 +1219,7 @@ export default function AdminPage() {
                             <p><strong>Customer:</strong> {order.name} ({order.email})</p>
                             <p><strong>Phone:</strong> <a href={`tel:${order.phone}`} style={{ color: "var(--primary)", fontWeight: "bold" }}>{order.phone || "N/A"}</a></p>
                             <p><strong>Address:</strong> {order.address || "N/A"}</p>
-                            <p><strong>Date:</strong> {new Date(order.date).toLocaleString()} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
+                            <p><strong>Date:</strong> {new Date(order.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
                             <p><strong>Total:</strong> NPR {order.total}</p>
 
                             <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
@@ -1449,7 +1449,7 @@ const PrintableBill = ({ printingOrders }: { printingOrders: any[] }) => {
               <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Order Reference:</p>
               <p style={{ fontWeight: 'bold', color: 'black', margin: '0' }}>#{order.id}</p>
               <p style={{ color: 'black', fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem' }}>Order Date:</p>
-              <p style={{ color: 'black', margin: '0' }}>{new Date(order.date).toLocaleString()} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
+              <p style={{ color: 'black', margin: '0' }}>{new Date(order.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
               <p style={{ color: 'black', marginTop: '0.5rem' }}><strong>Status:</strong> {order.status || 'Verified'}</p>
             </div>
           </div>
