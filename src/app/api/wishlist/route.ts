@@ -36,3 +36,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || 'Failed to join wishlist' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const productId = searchParams.get('productId');
+    const size = searchParams.get('size');
+
+    if (!productId) return NextResponse.json({ error: 'Missing productId' }, { status: 400 });
+
+    let query = supabaseAdmin
+      .from('wishlist')
+      .delete()
+      .eq('product_id', productId);
+    
+    if (size && size !== 'null' && size !== 'undefined') {
+      query = query.eq('selected_size', size);
+    } else {
+      query = query.is('selected_size', null);
+    }
+
+    const { error } = await query;
+
+    if (error) throw error;
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Wishlist delete error:", error);
+    return NextResponse.json({ error: error.message || 'Failed to clear wishlist' }, { status: 500 });
+  }
+}

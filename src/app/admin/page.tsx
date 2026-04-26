@@ -607,6 +607,22 @@ export default function AdminPage() {
     if (Array.isArray(data)) setWishlist(data);
   };
 
+  const handleClearWishlist = async (productId: number, size: string | null) => {
+    if (!confirm("Are you sure you want to clear these requests? Only do this if you have contacted the customers or restocked the item.")) return;
+    try {
+      const res = await fetch(`/api/wishlist?productId=${productId}&size=${size || 'null'}`, { method: 'DELETE' });
+      if (res.ok) {
+        alert("Wishlist cleared!");
+        fetchWishlist();
+      } else {
+        const data = await res.json();
+        alert("Error: " + data.error);
+      }
+    } catch (e) {
+      alert("Failed to clear wishlist");
+    }
+  };
+
   // Handlers
   const handleVerifyOrder = async (orderId: string, action: 'VERIFY' | 'REJECT') => {
     console.log(`Triggering ${action} for ${orderId}`);
@@ -1206,7 +1222,7 @@ export default function AdminPage() {
                     const pid = item.product_id;
                     const size = item.selected_size;
                     const key = `${pid}-${size || 'none'}`;
-                    if (!acc[key]) acc[key] = { name: item.products?.name || 'Unknown Product', size, count: 0, phones: [] };
+                    if (!acc[key]) acc[key] = { id: pid, name: item.products?.name || 'Unknown Product', size, count: 0, phones: [] };
                     acc[key].count++;
                     acc[key].phones.push(item.customer_phone);
                     return acc;
@@ -1229,6 +1245,23 @@ export default function AdminPage() {
                           </div>
                         ))}
                       </div>
+                      <button 
+                        onClick={() => handleClearWishlist(item.id, item.size)}
+                        style={{ 
+                          marginTop: '1rem', 
+                          width: '100%', 
+                          padding: '0.6rem', 
+                          background: '#ef4444', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '8px', 
+                          fontSize: '0.75rem', 
+                          fontWeight: 'bold', 
+                          cursor: 'pointer' 
+                        }}
+                      >
+                        RESTOCKED & CLEAR
+                      </button>
                     </div>
                   ))}
                   {wishlist.length === 0 && <p style={{ fontStyle: 'italic', opacity: 0.6 }}>No wishlist requests yet.</p>}
