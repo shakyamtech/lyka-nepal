@@ -285,6 +285,14 @@ export default function AccountDashboard() {
     fetchData();
   };
 
+  // Update expAmount when cart changes
+  useEffect(() => {
+    if (offlineCart.length > 0) {
+      const total = offlineCart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+      setExpAmount(total.toString());
+    }
+  }, [offlineCart]);
+
   // Auto-detect customer name from phone number
   useEffect(() => {
     if (offlineCustomerPhone.length >= 10 && !offlineCustomerName) {
@@ -348,6 +356,18 @@ export default function AccountDashboard() {
        return;
     }
 
+    // MANDATORY: Customer Name and Phone for Offline Sales
+    if (expCategory === "Offline Sale") {
+      if (!offlineCustomerName.trim() || !offlineCustomerPhone.trim()) {
+        alert("⚠️ Please enter both Customer Name and Phone Number before saving.");
+        return;
+      }
+      if (offlineCustomerPhone.trim().length < 10) {
+        alert("⚠️ Please enter a valid 10-digit phone number.");
+        return;
+      }
+    }
+
     try {
       // 1. Update Stock for ALL items
       for (const item of itemsToProcess) {
@@ -386,7 +406,9 @@ export default function AccountDashboard() {
         
         const customerPart = [offlineCustomerName, offlineCustomerPhone ? `| ${offlineCustomerPhone}` : ""].filter(Boolean).join(" ");
         finalDesc = `${itemStrings.join(", ")} ${customerPart} ${pidStrings}`.trim();
-        totalAmount = itemsToProcess.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        
+        // Use the manually entered amount if provided (for bargaining), otherwise use cart sum
+        totalAmount = Number(expAmount) || itemsToProcess.reduce((sum, i) => sum + (i.price * i.quantity), 0);
         
         // Ensure "Offline Sale: " prefix for income categories
         if (expCategory === "Offline Sale") finalDesc = `Offline Sale: ${finalDesc}`;
@@ -691,22 +713,24 @@ export default function AccountDashboard() {
 
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
                     <div style={{ flex: 1, minWidth: "150px" }}>
-                      <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px" }}>Customer Name:</label>
+                      <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px" }}>Customer Name *:</label>
                       <input 
                         type="text" 
                         placeholder="Mahesh Shakya" 
                         value={offlineCustomerName} 
                         onChange={(e) => setOfflineCustomerName(e.target.value)} 
+                        required={expCategory === "Offline Sale"}
                         style={{ padding: "0.5rem", width: "100%", borderRadius: "4px", border: "1px solid var(--admin-border)", background: "var(--admin-bg)", color: "var(--admin-text)" }} 
                       />
                     </div>
                     <div style={{ flex: 1, minWidth: "150px" }}>
-                      <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px" }}>Customer Phone:</label>
+                      <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px" }}>Customer Phone *:</label>
                       <input 
                         type="text" 
                         placeholder="9851..." 
                         value={offlineCustomerPhone} 
                         onChange={(e) => setOfflineCustomerPhone(e.target.value)} 
+                        required={expCategory === "Offline Sale"}
                         style={{ padding: "0.5rem", width: "100%", borderRadius: "4px", border: "1px solid var(--admin-border)", background: "var(--admin-bg)", color: "var(--admin-text)" }} 
                       />
                     </div>
