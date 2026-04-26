@@ -1192,9 +1192,15 @@ export default function AccountDashboard() {
                   </div>
                 </div>
 
-                <div className="unified-sales-container">
+                <div className="unified-sales-container" style={{ 
+                  maxHeight: "650px", 
+                  overflowY: "auto", 
+                  border: "1px solid var(--admin-border)",
+                  borderRadius: "8px",
+                  position: "relative"
+                }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-                    <thead>
+                    <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
                       <tr style={{ background: "#111", color: "white", textAlign: "left" }}>
                         <th style={{ padding: "0.7rem 1rem" }}>Customer / Type</th>
                         <th style={{ padding: "0.7rem 1rem" }}>Date & Details</th>
@@ -1235,7 +1241,7 @@ export default function AccountDashboard() {
                         </tr>
                       )}
                     </tbody>
-                    <tfoot>
+                    <tfoot style={{ position: "sticky", bottom: 0, zIndex: 2 }}>
                       <tr style={{ background: "#111", color: "white", fontWeight: "bold" }}>
                         <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL (FILTERED)</td>
                         <td style={{ padding: "0.7rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.revenue, 0).toLocaleString()}</td>
