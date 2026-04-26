@@ -1030,7 +1030,7 @@ export default function AccountDashboard() {
             <span>Gross Web Sales Revenue:</span>
             <span>Rs. {totalSalesRevenue.toLocaleString()}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "red", borderBottom: "1px solid #000", paddingBottom: "1rem", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: effectiveTheme === 'dark' ? "#94a3b8" : "#666", borderBottom: `1px solid ${effectiveTheme === 'dark' ? "#334155" : "#000"}`, paddingBottom: "1rem", marginBottom: "1rem" }}>
             <span>(-) Cost of Goods Sold (COGS):</span>
             <span>- Rs. {totalCOGS.toLocaleString()}</span>
           </div>
@@ -1057,12 +1057,12 @@ export default function AccountDashboard() {
             <span>+ Rs. {expenses.filter(e => e.type === "INCOME" && e.category !== "Offline Sale").reduce((sum,e)=>sum+Number(e.amount),0).toLocaleString()}</span>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "red", marginBottom: "0.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: effectiveTheme === 'dark' ? "#94a3b8" : "#666", marginBottom: "0.5rem" }}>
             <span>(-) Total Manual Expenses (Operating):</span>
             <span>- Rs. {totalOpEx.toLocaleString()}</span>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "#991b1b", borderBottom: "1px solid #000", paddingBottom: "1rem", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: effectiveTheme === 'dark' ? "#94a3b8" : "#666", borderBottom: `1px solid ${effectiveTheme === 'dark' ? "#334155" : "#000"}`, paddingBottom: "1rem", marginBottom: "1rem" }}>
             <span>(-) Loss on Damaged Products:</span>
             <span>- Rs. {totalDamageLoss.toLocaleString()}</span>
           </div>
