@@ -7,6 +7,157 @@ import { useSearchParams } from "next/navigation";
 import "./page.css";
 
 // Separate content component to use searchParams
+const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wishlistActiveId, setWishlistActiveId, wishlistPhone, setWishlistPhone, isJoiningWishlist, setIsJoiningWishlist }: any) => (
+  <div className="product-card">
+    <div className="product-image" style={{ position: 'relative' }}>
+      <Image
+        src={product.image}
+        alt={product.name}
+        fill
+        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+        style={{ objectFit: 'cover' }}
+        priority={false}
+      />
+      {product.stock === 0 && (
+        <div style={{
+          position: 'absolute', top: '0.75rem', left: '0.75rem',
+          background: '#fff', color: '#111', fontSize: '0.68rem',
+          fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase',
+          padding: '0.3rem 0.7rem'
+        }}>Sold Out</div>
+      )}
+      {product.stock > 0 ? (
+        <div className="hover-order-overlay" onClick={() => addToCart(product)}>
+          ORDER NOW
+        </div>
+      ) : (
+        <div className="hover-order-overlay" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setWishlistActiveId(product.id)}>
+          NOTIFY ME WHEN BACK
+        </div>
+      )}
+    </div>
+
+    {wishlistActiveId === product.id && (
+      <div style={{ 
+        background: '#f8fafc', 
+        padding: '1rem', 
+        borderTop: '1px solid #eee',
+        animation: 'slideDown 0.3s ease'
+      }}>
+        <p style={{ fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Notify me for {product.name} {selectedSizes[product.id] ? `(Size: ${selectedSizes[product.id]})` : ''}
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input 
+            type="tel" 
+            placeholder="Phone Number" 
+            value={wishlistPhone}
+            onChange={e => setWishlistPhone(e.target.value)}
+            style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem', border: '1px solid #ddd', outline: 'none' }}
+          />
+          <button 
+            disabled={isJoiningWishlist}
+            onClick={async () => {
+              if (!wishlistPhone) return alert("Phone Number required");
+              setIsJoiningWishlist(true);
+              const res = await fetch('/api/wishlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  productId: product.id, 
+                  phone: wishlistPhone,
+                  size: selectedSizes[product.id] || null
+                })
+              });
+              if (res.ok) {
+                alert("You're on the list! We'll notify you.");
+                setWishlistActiveId(null);
+                setWishlistPhone("");
+              } else {
+                alert("Failed to join wishlist.");
+              }
+              setIsJoiningWishlist(false);
+            }}
+            style={{ background: '#111', color: '#fff', border: 'none', padding: '0.5rem 1rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            {isJoiningWishlist ? "..." : "JOIN"}
+          </button>
+          <button onClick={() => setWishlistActiveId(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>×</button>
+        </div>
+      </div>
+    )}
+
+    <div className="product-info">
+      <div>
+        <h3>{product.name}</h3>
+        <p className="price">Rs.{product.price.toLocaleString()}</p>
+        {product.description && (
+          <p className="product-description">{product.description}</p>
+        )}
+      </div>
+
+      {['Clothes', 'Shoes'].includes(product.category) && product.sizes && (
+        <div className="size-selector">
+          <div className="size-buttons">
+            {product.sizes.split(',').filter(Boolean).map((sStr: string) => {
+              const parts = sStr.split(':');
+              const szName = parts[0].trim();
+              const szQty = parts.length > 1 ? Number(parts[1].trim()) : 1;
+
+              return (
+                <button
+                  key={szName}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (szQty > 0) {
+                      setSelectedSizes((prev: any) => ({ ...prev, [product.id]: szName }));
+                      setWishlistActiveId(null); // Close wishlist if they select an in-stock size
+                    } else {
+                      // If sold out size clicked, open wishlist for this size
+                      setWishlistActiveId(product.id);
+                      setSelectedSizes((prev: any) => ({ ...prev, [product.id]: szName }));
+                    }
+                  }}
+                  className={`size-btn ${selectedSizes[product.id] === szName ? 'selected' : ''}`}
+                  style={{ 
+                    border: szQty <= 0 ? '1px dashed #ef4444' : undefined,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {szName} {szQty <= 0 && <span style={{ fontSize: '0.65rem', display: 'block', color: '#ef4444', fontWeight: 'bold' }}>Sold Out</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const CategoryScroll = ({ products, category, ...props }: any) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const handleScroll = (dir: 'left' | 'right') => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: dir === 'left' ? -350 : 350, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <>
+      <button className="slider-arrow left" onClick={() => handleScroll('left')} aria-label="Previous">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="20" y1="12" x2="4" y2="12"></line><polyline points="10 18 4 12 10 6"></polyline></svg>
+      </button>
+      <div className="product-grid horizontal-scroll" ref={scrollRef}>
+        {products.map((product: any) => <ProductCard key={`slider-${category}-${product.id}`} product={product} {...props} />)}
+      </div>
+      <button className="slider-arrow right" onClick={() => handleScroll('right')} aria-label="Next">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="14 6 20 12 14 18"></polyline></svg>
+      </button>
+    </>
+  );
+};
+
 function HomeContent() {
   const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
@@ -449,7 +600,21 @@ function HomeContent() {
                   No products found.
                 </p>
               )}
-              {products.map((product) => <ProductCard key={`slider-${product.id}`} product={product} />)}
+              {products.map((product) => (
+                <ProductCard 
+                  key={`slider-${product.id}`} 
+                  product={product} 
+                  addToCart={addToCart}
+                  selectedSizes={selectedSizes}
+                  setSelectedSizes={setSelectedSizes}
+                  wishlistActiveId={wishlistActiveId}
+                  setWishlistActiveId={setWishlistActiveId}
+                  wishlistPhone={wishlistPhone}
+                  setWishlistPhone={setWishlistPhone}
+                  isJoiningWishlist={isJoiningWishlist}
+                  setIsJoiningWishlist={setIsJoiningWishlist}
+                />
+              ))}
             </div>
             <button className="slider-arrow right" onClick={scrollRight} aria-label="Next">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="14 6 20 12 14 18"></polyline></svg>
@@ -504,7 +669,21 @@ function HomeContent() {
                 No products found.
               </p>
             )}
-            {filteredProducts.slice(0, showAll ? undefined : 12).map((product) => <ProductCard key={`grid-${product.id}`} product={product} />)}
+            {filteredProducts.slice(0, showAll ? undefined : 12).map((product) => (
+              <ProductCard 
+                key={`grid-${product.id}`} 
+                product={product} 
+                addToCart={addToCart}
+                selectedSizes={selectedSizes}
+                setSelectedSizes={setSelectedSizes}
+                wishlistActiveId={wishlistActiveId}
+                setWishlistActiveId={setWishlistActiveId}
+                wishlistPhone={wishlistPhone}
+                setWishlistPhone={setWishlistPhone}
+                isJoiningWishlist={isJoiningWishlist}
+                setIsJoiningWishlist={setIsJoiningWishlist}
+              />
+            ))}
           </div>
 
           {!showAll && filteredProducts.length > 12 && (
@@ -531,7 +710,19 @@ function HomeContent() {
                   <h2>{item.name}</h2>
                 </div>
                 <div className="slider-wrapper">
-                  <CategoryScroll products={catProducts} category={item.name} />
+                  <CategoryScroll 
+                    products={catProducts} 
+                    category={item.name} 
+                    addToCart={addToCart}
+                    selectedSizes={selectedSizes}
+                    setSelectedSizes={setSelectedSizes}
+                    wishlistActiveId={wishlistActiveId}
+                    setWishlistActiveId={setWishlistActiveId}
+                    wishlistPhone={wishlistPhone}
+                    setWishlistPhone={setWishlistPhone}
+                    isJoiningWishlist={isJoiningWishlist}
+                    setIsJoiningWishlist={setIsJoiningWishlist}
+                  />
                 </div>
                 
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3rem' }}>
