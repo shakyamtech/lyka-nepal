@@ -31,14 +31,24 @@ export default function AccountDashboard() {
     
     const product = products.find(p => p.id.toString() === pid);
     
-    // Improved Parsing: Extract customer name
-    let descPart = e.description.replace(/^Offline Sale:\s*/i, '').split('(x')[0].trim();
+    // Improved Parsing: Extract customer name from multi-item description
     let customerName = "Walk-in Customer";
+    const cleanDesc = e.description.replace(/^Offline Sale:\s*/i, '').split('[PID:')[0].trim();
+    const beforePipe = cleanDesc.split('|')[0].trim();
     
-    if (product && descPart.toLowerCase().startsWith(product.name.toLowerCase())) {
-        customerName = descPart.substring(product.name.length).trim() || "Walk-in Customer";
-    } else if (descPart) {
-        customerName = descPart;
+    // In multi-item sales, name is after the last item: "Item (x1), Item (x1) Name"
+    const lastBracketIdx = beforePipe.lastIndexOf(')');
+    if (lastBracketIdx !== -1) {
+        const potentialName = beforePipe.substring(lastBracketIdx + 1).trim();
+        if (potentialName) customerName = potentialName;
+    } else {
+        // Fallback for single item legacy format
+        let descPart = beforePipe.split('(x')[0].trim();
+        if (product && descPart.toLowerCase().startsWith(product.name.toLowerCase())) {
+            customerName = descPart.substring(product.name.length).trim() || "Walk-in Customer";
+        } else if (descPart) {
+            customerName = descPart;
+        }
     }
     
     const simulatedOrder = {
@@ -515,28 +525,39 @@ export default function AccountDashboard() {
   const totalOfflineCOGS = expenses
     .filter(e => e.type === "INCOME" && e.category === "Offline Sale")
     .reduce((sum, e) => {
-      // Priority 1: Match by hidden ID tag [PID:xxx]
-      const pidMatch = e.description.match(/\[PID:(.+?)\]/);
-      let p = null;
-      if (pidMatch) {
-        const pid = pidMatch[1];
-        p = products.find(prod => prod.id?.toString() === pid);
-      }
+      const pidMatches = Array.from(e.description.matchAll(/\[PID:(.+?)\]/g));
+      const qtyMatches = Array.from(e.description.matchAll(/\(x(\d+)\)/g));
       
-      // Priority 2: Fallback to name matching (for older entries)
-      if (!p) {
+      let itemCogs = 0;
+      if (pidMatches.length > 0) {
+        pidMatches.forEach((match, index) => {
+          const pid = match[1];
+          const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
+          const prod = products.find(prod => prod.id?.toString() === pid);
+          if (prod) itemCogs += (Number(prod.cost) || 0) * qty;
+        });
+      } else {
+        // Fallback for single-item legacy entries
         const productName = e.description.replace("Offline Sale: ", "").split(" (x")[0];
-        p = products.find(prod => prod.name === productName);
+        const p = products.find(prod => prod.name === productName);
+        const qtyMatch = e.description.match(/\(x(\d+)\)/);
+        const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+        itemCogs = p ? (Number(p.cost) || 0) * qty : 0;
       }
-
-      const qtyMatch = e.description.match(/\(x(\d+)\)/);
-      const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
-      return sum + ((p?.cost || 0) * qty);
+      return sum + itemCogs;
     }, 0);
 
   const totalDamageLoss = expenses.filter(e => e.category === "Inventory Damage / Loss").reduce((sum, e) => sum + Number(e.amount), 0);
   const totalOpEx = expenses.filter(e => e.type !== "INCOME" && e.category !== "Inventory Damage / Loss").reduce((sum, e) => sum + Number(e.amount), 0);
-  const netProfit = (grossProfit) + (totalOtherIncome - totalOfflineCOGS) - totalOpEx - totalDamageLoss;
+  const totalOfflineSales = expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").reduce((sum, e) => sum + Number(e.amount), 0);
+  const manualNonSaleIncome = expenses.filter(e => e.type === "INCOME" && e.category !== "Offline Sale").reduce((sum, e) => sum + Number(e.amount), 0);
+
+  // Business Profit = (Web Gross Profit) + (Offline Sale Margin) - Operating Expenses - Damage Loss
+  const salesNetProfit = (grossProfit) + (totalOfflineSales - totalOfflineCOGS) - totalOpEx - totalDamageLoss;
+  // Overall Cash = Sales Profit + Manual Injections (Loans/Capital/Misc Income)
+  const overallCashPosition = salesNetProfit + manualNonSaleIncome;
+
+  const netProfit = salesNetProfit; // For the variable used in UI
 
   // Stock Summary Math
   const inventoryCostValue = products.reduce((sum, p) => sum + (Number(p.stock) * Number(p.cost || 0)), 0);
@@ -903,8 +924,16 @@ export default function AccountDashboard() {
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.8rem", fontWeight: "900", background: effectiveTheme === 'dark' ? "#1e293b" : "#f0f0f0", color: effectiveTheme === 'dark' ? "#fff" : "#000", padding: "1rem", borderRadius: "8px", border: `1px solid ${effectiveTheme === 'dark' ? "#334155" : "#ddd"}` }}>
-            <span>NET PROFIT:</span>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontSize: "1rem", fontWeight: "normal", opacity: 0.8 }}>BUSINESS NET PROFIT (Sales Only)</span>
+              <span>NET PROFIT:</span>
+            </div>
             <span style={{ color: netProfit >= 0 ? (effectiveTheme === 'dark' ? "#4ade80" : "green") : (effectiveTheme === 'dark' ? "#f87171" : "red") }}>Rs. {netProfit.toLocaleString()}</span>
+          </div>
+
+          <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", fontSize: "1.2rem", fontWeight: "bold", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", padding: "1rem", borderRadius: "8px", border: "1px dashed #3b82f6" }}>
+            <span>OVERALL CASH POSITION (Incl. Loans/Capital):</span>
+            <span>Rs. {overallCashPosition.toLocaleString()}</span>
           </div>
 
           {/* Unified Sales Breakdown Calculation */}
@@ -920,27 +949,47 @@ export default function AccountDashboard() {
                 desc: o.items ? o.items.map((i:any) => i.name).join(', ') : "Online Order"
               })),
               ...expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").map(e => {
-                const pidMatch = e.description.match(/\[PID:(.+?)\]/);
-                let p = null;
-                if (pidMatch) {
-                  p = products.find(prod => prod.id?.toString() === pidMatch[1]);
-                }
-                if (!p) {
+                // Multi-item COGS Calculation
+                const pidMatches = Array.from(e.description.matchAll(/\[PID:(.+?)\]/g));
+                const qtyMatches = Array.from(e.description.matchAll(/\(x(\d+)\)/g));
+                
+                let totalCogs = 0;
+                if (pidMatches.length > 0) {
+                  pidMatches.forEach((match, index) => {
+                    const pid = match[1];
+                    const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
+                    const prod = products.find(prod => prod.id?.toString() === pid);
+                    if (prod) totalCogs += (Number(prod.cost) || 0) * qty;
+                  });
+                } else {
+                  // Fallback for single-item legacy entries
                   const productName = e.description.replace("Offline Sale: ", "").split(" (x")[0];
-                  p = products.find(prod => prod.name === productName);
+                  const p = products.find(prod => prod.name === productName);
+                  const qtyMatch = e.description.match(/\(x(\d+)\)/);
+                  const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+                  totalCogs = p ? (Number(p.cost) || 0) * qty : 0;
                 }
-
-                const qtyMatch = e.description.match(/\(x(\d+)\)/);
-                const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
-                const cogs = p ? (p.cost || 0) * qty : 0;
 
                 // Extract customer name exactly like in the print logic
-                let descPart = e.description.replace(/^Offline Sale:\s*/i, '').split('(x')[0].trim();
                 let customerName = "Walk-in Customer";
-                if (p && descPart.toLowerCase().startsWith(p.name.toLowerCase())) {
-                  customerName = descPart.substring(p.name.length).trim() || "Walk-in Customer";
-                } else if (descPart && !p) {
-                  customerName = descPart;
+                const cleanDescForName = e.description.replace(/^Offline Sale:\s*/i, '').split('[PID:')[0].trim();
+                const beforePipeForName = cleanDescForName.split('|')[0].trim();
+                
+                const lastBracketIdx = beforePipeForName.lastIndexOf(')');
+                if (lastBracketIdx !== -1) {
+                  const potentialName = beforePipeForName.substring(lastBracketIdx + 1).trim();
+                  if (potentialName) customerName = potentialName;
+                } else {
+                  // Fallback for single item legacy format
+                  let descPart = beforePipeForName.split('(x')[0].trim();
+                  const firstPidMatch = e.description.match(/\[PID:(.+?)\]/);
+                  const firstP = firstPidMatch ? products.find(prod => prod.id?.toString() === firstPidMatch[1]) : null;
+
+                  if (firstP && descPart.toLowerCase().startsWith(firstP.name.toLowerCase())) {
+                    customerName = descPart.substring(firstP.name.length).trim() || "Walk-in Customer";
+                  } else if (descPart && !firstP) {
+                    customerName = descPart;
+                  }
                 }
 
                 return {
@@ -949,8 +998,8 @@ export default function AccountDashboard() {
                   contact: "(Physical Sale)",
                   date: e.date,
                   revenue: Number(e.amount),
-                  cogs: cogs,
-                  desc: e.description.replace(/\[PID:.+?\]/, "") // Hide the ID tag from the user UI
+                  cogs: totalCogs,
+                  desc: e.description.replace(/\[PID:.+?\]/g, "") // Hide all ID tags from the user UI
                 };
               })
             ]
