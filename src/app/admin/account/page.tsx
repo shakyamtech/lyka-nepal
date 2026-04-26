@@ -1069,12 +1069,29 @@ export default function AccountDashboard() {
             <span>- Rs. {totalDamageLoss.toLocaleString()}</span>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.8rem", fontWeight: "900", background: effectiveTheme === 'dark' ? "#1e293b" : "#f0f0f0", color: effectiveTheme === 'dark' ? "#fff" : "#000", padding: "1rem", borderRadius: "8px", border: `1px solid ${effectiveTheme === 'dark' ? "#334155" : "#ddd"}` }}>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: "1rem", fontWeight: "normal", opacity: 0.8 }}>BUSINESS NET PROFIT (Sales Only)</span>
-              <span>NET PROFIT:</span>
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center",
+            background: effectiveTheme === 'dark' ? "#1e293b" : "#f8fafc", 
+            color: effectiveTheme === 'dark' ? "#fff" : "#000", 
+            padding: "1.5rem", 
+            borderRadius: "12px", 
+            border: `1px solid ${effectiveTheme === 'dark' ? "#334155" : "#e2e8f0"}`,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+          }}>
+            <div>
+              <div style={{ fontSize: "0.8rem", fontWeight: "600", color: effectiveTheme === 'dark' ? "#94a3b8" : "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                Net Business Profit
+              </div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "800" }}>TOTAL PROFIT:</div>
             </div>
-            <span style={{ color: netProfit >= 0 ? (effectiveTheme === 'dark' ? "#4ade80" : "green") : (effectiveTheme === 'dark' ? "#f87171" : "red") }}>Rs. {netProfit.toLocaleString()}</span>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "1rem", fontWeight: "700", color: netProfit >= 0 ? "#10b981" : "#ef4444", marginBottom: "2px" }}>Rs.</div>
+              <div style={{ fontSize: "2.2rem", fontWeight: "900", color: netProfit >= 0 ? "#10b981" : "#ef4444", lineHeight: 1 }}>
+                {netProfit.toLocaleString()}
+              </div>
+            </div>
           </div>
 
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", fontSize: "1.2rem", fontWeight: "bold", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", padding: "1rem", borderRadius: "8px", border: "1px dashed #3b82f6" }}>
