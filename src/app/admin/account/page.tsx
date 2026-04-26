@@ -169,8 +169,13 @@ export default function AccountDashboard() {
     if (cartTotal === 0) return;
 
     if (expDiscount) {
-      const discVal = Number(expDiscount);
-      if (expDiscountType === "%") {
+      const discStr = expDiscount.toString().trim();
+      const isPercent = discStr.endsWith("%");
+      const discVal = Number(discStr.replace("%", ""));
+
+      if (isNaN(discVal)) return;
+
+      if (isPercent) {
         const calculatedAmount = cartTotal * (1 - discVal / 100);
         setExpAmount(Math.round(calculatedAmount).toString());
       } else {
@@ -468,7 +473,16 @@ export default function AccountDashboard() {
         const cartTotal = itemsToProcess.reduce((sum, i) => sum + (i.price * i.quantity), 0);
         
         // Priority logic for totalAmount and discount
-        let finalDiscount = Number(expDiscount) || 0;
+        let finalDiscount = 0;
+        const discStr = expDiscount.toString().trim();
+        const isPercent = discStr.endsWith("%");
+        const discVal = Number(discStr.replace("%", ""));
+        
+        if (!isNaN(discVal)) {
+          if (isPercent) finalDiscount = Math.round(cartTotal * (discVal / 100));
+          else finalDiscount = discVal;
+        }
+
         let finalTotalAmount = Number(expAmount);
 
         if (finalDiscount > 0 && !expAmount) {
@@ -906,23 +920,14 @@ export default function AccountDashboard() {
                    </div>
                    {expCategory === "Offline Sale" && (
                      <div style={{ width: "180px", position: "relative" }}>
-                       <label style={{ fontSize: "0.7rem", display: "block", marginBottom: "4px", opacity: 0.7 }}>Discount Given:</label>
-                       <div style={{ display: "flex", border: "1px solid #ef4444", borderRadius: "4px", overflow: "hidden" }}>
-                         <input 
-                           type="number" 
-                           placeholder="0" 
-                           value={expDiscount} 
-                           onChange={e => setExpDiscount(e.target.value)} 
-                           style={{ flex: 1, padding: "0.8rem", background: "var(--admin-card)", color: "#ef4444", border: "none", fontWeight: "bold", outline: "none" }} 
-                         />
-                         <button 
-                           type="button"
-                           onClick={() => setExpDiscountType(expDiscountType === "NPR" ? "%" : "NPR")}
-                           style={{ padding: "0 0.8rem", background: "#ef4444", color: "white", border: "none", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
-                         >
-                           {expDiscountType === "NPR" ? "Rs." : "%"}
-                         </button>
-                       </div>
+                       <label style={{ fontSize: "0.7rem", display: "block", marginBottom: "4px", opacity: 0.7 }}>Discount (Amount or %):</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. 500 or 10%" 
+                          value={expDiscount} 
+                          onChange={e => setExpDiscount(e.target.value)} 
+                          style={{ padding: "0.8rem", width: "100%", background: "var(--admin-card)", color: "#ef4444", border: "1px solid #ef4444", fontWeight: "bold", outline: "none" }} 
+                        />
                      </div>
                    )}
                  </div>
