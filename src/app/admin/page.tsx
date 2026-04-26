@@ -69,23 +69,46 @@ function AnalyticsSection({ orders, products, expenses = [] }: { orders: any[], 
       const saleAmount = Number(sale.amount || 0);
       revenue += saleAmount;
 
-      // Extract COGS for offline sale using [PID:ID] pattern
-      const pidRegex = /\[PID:(\d+)\]/g;
+      // Extract COGS for offline sale using unified regex
+      const pidMatches = Array.from(sale.description.matchAll(/\[PID:(.+?)\]/g));
+      const qtyMatches = Array.from(sale.description.matchAll(/\(x(\d+)\)/g));
+      
       let saleCost = 0;
-      let match;
-      while ((match = pidRegex.exec(sale.description || "")) !== null) {
-        const pid = match[1];
-        const product = products.find(p => p.id?.toString() === pid);
-        if (product) {
-          // If a description contains multiple items, we assume the cost is summed
-          // Note: offline sales recorded via Daybook currently log the full amount for the bundle
-          // We look for "Qty:X" in the same description if possible, or assume 1
-          const qtyMatch = sale.description.match(new RegExp(`\\[PID:${pid}\\][^]*?Qty:(\\d+)`, 'i'));
-          const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
-          saleCost += (Number(product.cost || 0) * qty);
-        }
+      if (pidMatches.length > 0) {
+        pidMatches.forEach((match, index) => {
+          const pid = match[1];
+          const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
+          const product = products.find(p => p.id?.toString() === pid);
+          if (product) saleCost += (Number(product.cost || 0) * qty);
+        });
+      } else {
+        // Fallback for single-item legacy entries
+        const productName = sale.description.replace("Offline Sale: ", "").split(" (x")[0];
+        const p = products.find(prod => prod.name === productName);
+        const qtyMatch = sale.description.match(/\(x(\d+)\)/);
+        const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+        saleCost = p ? (Number(p.cost) || 0) * qty : 0;
       }
       costTotal += saleCost;
+    });
+
+    // 3. Process Returns (Refund Paid)
+    const returns = filteredExpenses.filter(e => e.category === 'Refund Paid');
+    returns.forEach(ret => {
+      const retAmount = Number(ret.amount || 0);
+      revenue -= retAmount;
+
+      const pidMatches = Array.from(ret.description.matchAll(/\[PID:(.+?)\]/g));
+      const qtyMatches = Array.from(ret.description.matchAll(/\(x(\d+)\)/g));
+      
+      if (pidMatches.length > 0) {
+        pidMatches.forEach((match, index) => {
+          const pid = match[1];
+          const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
+          const product = products.find(p => p.id?.toString() === pid);
+          if (product) costTotal -= (Number(product.cost || 0) * qty);
+        });
+      }
     });
 
     return {
@@ -439,6 +462,14 @@ export default function AdminPage() {
   const lastCheckRef = useRef(Date.now());
   const playedSoundsRef = useRef<Set<number>>(new Set());
 
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      fetchOrders();
+      fetchExpenses();
+      fetchProducts();
+    }
+  }, [activeTab]);
+
   // Polling Effect
   useEffect(() => {
     setIsMounted(true);
@@ -458,8 +489,13 @@ export default function AdminPage() {
             setUnreadCount(prev => prev + 1);
           });
         }
+        
+        // Refresh dashboard data periodically
+        fetchOrders();
+        fetchExpenses();
+        fetchProducts();
       } catch (e) { }
-    }, 3000);
+    }, 10000); // 10s refresh
 
     return () => clearInterval(interval);
   }, [currentUser]);
@@ -896,20 +932,22 @@ export default function AdminPage() {
       if (topSellersRange === "TODAY" && saleDate < startOfToday) return;
       if (topSellersRange === "MONTH" && saleDate < startOfMonth) return;
 
-      const pidRegex = /\[PID:(\d+)\]/g;
-      let match;
-      while ((match = pidRegex.exec(sale.description || "")) !== null) {
-        const pid = match[1];
-        const product = products.find(p => p.id?.toString() === pid);
-        if (product) {
-          const qtyMatch = sale.description.match(new RegExp(`\\[PID:${pid}\\][^]*?Qty:(\\d+)`, 'i'));
-          const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
-          const id = product.id?.toString() || product.name;
-          if (!itemCounts[id]) {
-            itemCounts[id] = { id, name: product.name, count: 0 };
+      const pidMatches = Array.from(sale.description.matchAll(/\[PID:(.+?)\]/g));
+      const qtyMatches = Array.from(sale.description.matchAll(/\(x(\d+)\)/g));
+      
+      if (pidMatches.length > 0) {
+        pidMatches.forEach((match, index) => {
+          const pid = match[1];
+          const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
+          const product = products.find(p => p.id?.toString() === pid);
+          if (product) {
+            const id = product.id?.toString() || product.name;
+            if (!itemCounts[id]) {
+              itemCounts[id] = { id, name: product.name, count: 0 };
+            }
+            itemCounts[id].count += qty;
           }
-          itemCounts[id].count += qty;
-        }
+        });
       }
     });
 
