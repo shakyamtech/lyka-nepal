@@ -575,27 +575,27 @@ export default function AdminPage() {
   };
 
   const fetchProducts = async () => {
-    const res = await fetch("/api/products");
+    const res = await fetch(`/api/products?t=${Date.now()}`);
     const data = await res.json();
     setProducts(data);
   };
   const fetchOrders = async () => {
-    const res = await fetch("/api/orders");
+    const res = await fetch(`/api/orders?t=${Date.now()}`);
     const data = await res.json();
     if (Array.isArray(data)) setOrders(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
   const fetchUsers = async () => {
-    const res = await fetch("/api/users");
+    const res = await fetch(`/api/users?t=${Date.now()}`);
     const data = await res.json();
     if (Array.isArray(data)) setUsers(data);
   };
   const fetchCategories = async () => {
-    const res = await fetch("/api/categories");
+    const res = await fetch(`/api/categories?t=${Date.now()}`);
     const data = await res.json();
     if (Array.isArray(data)) setCategories(data);
   };
   const fetchExpenses = async () => {
-    const res = await fetch("/api/expenses");
+    const res = await fetch(`/api/expenses?t=${Date.now()}`);
     const data = await res.json();
     if (Array.isArray(data)) setExpenses(data);
   };
