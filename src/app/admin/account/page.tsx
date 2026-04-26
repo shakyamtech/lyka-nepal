@@ -134,6 +134,7 @@ export default function AccountDashboard() {
   const [expCategory, setExpCategory] = useState("Offline Sale");
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
+  const [expDiscount, setExpDiscount] = useState("");
   const [offlineProductId, setOfflineProductId] = useState("");
   const [offlineQty, setOfflineQty] = useState("1");
   const [offlineCustomerName, setOfflineCustomerName] = useState("");
@@ -443,14 +444,25 @@ export default function AccountDashboard() {
         const customerPart = [offlineCustomerName, offlineCustomerPhone ? `| ${offlineCustomerPhone}` : ""].filter(Boolean).join(" ");
         finalDesc = `${itemStrings.join(", ")} ${customerPart} ${pidStrings}`.trim();
         
-        // Use the manually entered amount if provided (for bargaining), otherwise use cart sum
         const cartTotal = itemsToProcess.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        totalAmount = Number(expAmount) || cartTotal;
         
-        // Track Discount
-        const discount = (expAmount && Number(expAmount) < cartTotal) ? (cartTotal - Number(expAmount)) : 0;
-        if (discount > 0) {
-            finalDesc += ` [DISC:${discount}]`;
+        // Priority logic for totalAmount and discount
+        let finalDiscount = Number(expDiscount) || 0;
+        let finalTotalAmount = Number(expAmount);
+
+        if (finalDiscount > 0 && !expAmount) {
+            // Case: User entered discount but no final amount
+            finalTotalAmount = cartTotal - finalDiscount;
+        } else if (expAmount && Number(expAmount) < cartTotal && finalDiscount === 0) {
+            // Case: User entered final amount (bargain) but no explicit discount
+            finalDiscount = cartTotal - Number(expAmount);
+        }
+
+        totalAmount = finalTotalAmount || cartTotal;
+        
+        // Track Discount in description
+        if (finalDiscount > 0) {
+            finalDesc += ` [DISC:${finalDiscount}]`;
         }
         
         // Ensure "Offline Sale: " prefix for income categories
@@ -495,7 +507,7 @@ export default function AccountDashboard() {
       }
 
       if (res.ok) {
-        setExpDesc(""); setExpAmount(""); setOfflineProductId(""); setOfflineQty("1"); 
+        setExpDesc(""); setExpAmount(""); setExpDiscount(""); setOfflineProductId(""); setOfflineQty("1"); 
         setOfflineCustomerName(""); setOfflineCustomerPhone(""); setOfflineCart([]); setShouldUpdateStock(true);
         setCleanupPhone("");
         fetchData();
@@ -856,15 +868,31 @@ export default function AccountDashboard() {
                 required 
                 style={{ padding: "0.8rem", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }} 
               />
-               <div style={{ position: "relative" }}>
-                 <input 
-                   type="number" 
-                   placeholder="Amount (NPR)" 
-                   value={expAmount} 
-                   onChange={e => setExpAmount(e.target.value)} 
-                   required 
-                   style={{ padding: "0.8rem", width: "100%" }} 
-                 />
+                 <div style={{ display: "flex", gap: "1rem" }}>
+                   <div style={{ flex: 1, position: "relative" }}>
+                     <label style={{ fontSize: "0.7rem", display: "block", marginBottom: "4px", opacity: 0.7 }}>Actual Cash Amount (Final Price):</label>
+                     <input 
+                       type="number" 
+                       placeholder="Final Amount (NPR)" 
+                       value={expAmount} 
+                       onChange={e => setExpAmount(e.target.value)} 
+                       required 
+                       style={{ padding: "0.8rem", width: "100%", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }} 
+                     />
+                   </div>
+                   {expCategory === "Offline Sale" && (
+                     <div style={{ width: "140px", position: "relative" }}>
+                       <label style={{ fontSize: "0.7rem", display: "block", marginBottom: "4px", opacity: 0.7 }}>Discount Given:</label>
+                       <input 
+                         type="number" 
+                         placeholder="Discount" 
+                         value={expDiscount} 
+                         onChange={e => setExpDiscount(e.target.value)} 
+                         style={{ padding: "0.8rem", width: "100%", background: "var(--admin-card)", color: "#ef4444", border: "1px solid #ef4444", fontWeight: "bold" }} 
+                       />
+                     </div>
+                   )}
+                 </div>
                  {offlineProductId && (() => {
                     const p = products.find(prod => prod.id.toString() === offlineProductId);
                     if (!p) return null;
@@ -983,7 +1011,7 @@ export default function AccountDashboard() {
             <span>- Rs. {totalOfflineCOGS.toLocaleString()}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.0rem", color: "#ef4444", marginBottom: "0.5rem", fontStyle: "italic" }}>
-            <span>(ℹ️) Total Discounts Provided (Bargaining):</span>
+            <span>(ℹ️) Total Discounts Provided:</span>
             <span>Rs. {totalDiscountsProvided.toLocaleString()}</span>
           </div>
 
@@ -1523,7 +1551,7 @@ const PrintableBill = ({ printingOrders }: { printingOrders: any[] }) => {
             
             {order.discount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '2rem', marginTop: '2px', fontSize: '0.85rem', color: '#dc2626', fontWeight: 'bold' }}>
-                <span>Bargain Discount:</span>
+                <span>Discount:</span>
                 <span>- NPR {order.discount}</span>
               </div>
             )}
