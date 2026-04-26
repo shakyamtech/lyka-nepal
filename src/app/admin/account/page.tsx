@@ -104,8 +104,8 @@ export default function AccountDashboard() {
       setEffectiveTheme(themeMode);
     }
   }, [themeMode]);
-  const [expType, setExpType] = useState("EXPENSE");
-  const [expCategory, setExpCategory] = useState("Marketing");
+  const [expType, setExpType] = useState("INCOME");
+  const [expCategory, setExpCategory] = useState("Offline Sale");
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [offlineProductId, setOfflineProductId] = useState("");
@@ -737,7 +737,7 @@ export default function AccountDashboard() {
                       <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px" }}>Customer Name *:</label>
                       <input 
                         type="text" 
-                        placeholder="Mahesh Shakya" 
+                        placeholder="Full Name" 
                         value={offlineCustomerName} 
                         onChange={(e) => setOfflineCustomerName(e.target.value)} 
                         required={expCategory === "Offline Sale"}
@@ -748,7 +748,7 @@ export default function AccountDashboard() {
                       <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px" }}>Customer Phone *:</label>
                       <input 
                         type="text" 
-                        placeholder="9851..." 
+                        placeholder="98..." 
                         value={offlineCustomerPhone} 
                         onChange={(e) => setOfflineCustomerPhone(e.target.value)} 
                         required={expCategory === "Offline Sale"}
