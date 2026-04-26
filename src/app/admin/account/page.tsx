@@ -135,6 +135,7 @@ export default function AccountDashboard() {
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [expDiscount, setExpDiscount] = useState("");
+  const [expDiscountType, setExpDiscountType] = useState<"NPR" | "%">("NPR");
   const [offlineProductId, setOfflineProductId] = useState("");
   const [offlineQty, setOfflineQty] = useState("1");
   const [offlineCustomerName, setOfflineCustomerName] = useState("");
@@ -160,6 +161,26 @@ export default function AccountDashboard() {
   const [cleanupPhone, setCleanupPhone] = useState("");
   const [approvingReqId, setApprovingReqId] = useState<string | null>(null);
   const [tempRefundAmt, setTempRefundAmt] = useState("");
+
+  // Sync Final Amount based on Discount
+  useEffect(() => {
+    if (expCategory !== "Offline Sale") return;
+    const cartTotal = offlineCart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    if (cartTotal === 0) return;
+
+    if (expDiscount) {
+      const discVal = Number(expDiscount);
+      if (expDiscountType === "%") {
+        const calculatedAmount = cartTotal * (1 - discVal / 100);
+        setExpAmount(Math.round(calculatedAmount).toString());
+      } else {
+        const calculatedAmount = cartTotal - discVal;
+        setExpAmount(calculatedAmount.toString());
+      }
+    } else if (!expAmount || expAmount === "0") {
+      setExpAmount(cartTotal.toString());
+    }
+  }, [expDiscount, expDiscountType, offlineCart, expCategory]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -875,21 +896,33 @@ export default function AccountDashboard() {
                        type="number" 
                        placeholder="Final Amount (NPR)" 
                        value={expAmount} 
-                       onChange={e => setExpAmount(e.target.value)} 
+                       onChange={e => {
+                         setExpAmount(e.target.value);
+                         if (expDiscount && e.target.value !== expAmount) setExpDiscount(""); 
+                       }} 
                        required 
-                       style={{ padding: "0.8rem", width: "100%", background: "var(--admin-card)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }} 
+                       style={{ padding: "0.8rem", width: "100%", background: "var(--admin-card)", color: "#10b981", border: "1px solid var(--admin-border)", fontWeight: "bold", fontSize: "1.1rem" }} 
                      />
                    </div>
                    {expCategory === "Offline Sale" && (
-                     <div style={{ width: "140px", position: "relative" }}>
+                     <div style={{ width: "180px", position: "relative" }}>
                        <label style={{ fontSize: "0.7rem", display: "block", marginBottom: "4px", opacity: 0.7 }}>Discount Given:</label>
-                       <input 
-                         type="number" 
-                         placeholder="Discount" 
-                         value={expDiscount} 
-                         onChange={e => setExpDiscount(e.target.value)} 
-                         style={{ padding: "0.8rem", width: "100%", background: "var(--admin-card)", color: "#ef4444", border: "1px solid #ef4444", fontWeight: "bold" }} 
-                       />
+                       <div style={{ display: "flex", border: "1px solid #ef4444", borderRadius: "4px", overflow: "hidden" }}>
+                         <input 
+                           type="number" 
+                           placeholder="0" 
+                           value={expDiscount} 
+                           onChange={e => setExpDiscount(e.target.value)} 
+                           style={{ flex: 1, padding: "0.8rem", background: "var(--admin-card)", color: "#ef4444", border: "none", fontWeight: "bold", outline: "none" }} 
+                         />
+                         <button 
+                           type="button"
+                           onClick={() => setExpDiscountType(expDiscountType === "NPR" ? "%" : "NPR")}
+                           style={{ padding: "0 0.8rem", background: "#ef4444", color: "white", border: "none", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                         >
+                           {expDiscountType === "NPR" ? "Rs." : "%"}
+                         </button>
+                       </div>
                      </div>
                    )}
                  </div>
