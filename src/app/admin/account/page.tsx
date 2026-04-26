@@ -22,33 +22,59 @@ export default function AccountDashboard() {
   const [printingOrders, setPrintingOrders] = useState<any[]>([]);
 
   const handlePrintOffline = (e: any) => {
-    // Parse description: "summer windjackate Rabindra (x1) [PID:41]"
-    const pidMatch = e.description.match(/\[PID:(\d+)\]/);
-    const qtyMatch = e.description.match(/\(x(\d+)\)/);
+    // Parse ALL products from description: "Item A (x1), Item B (x2) Name | Phone [PID:41] [PID:42]"
+    const pidMatches = Array.from(e.description.matchAll(/\[PID:(\d+)\]/g)) as any[];
+    const qtyMatches = Array.from(e.description.matchAll(/\(x(\d+)\)/g)) as any[];
+    const discMatch = e.description.match(/\[DISC:(\d+)\]/);
+    const discount = discMatch ? Number(discMatch[1]) : 0;
     
-    const pid = pidMatch ? pidMatch[1] : null;
-    const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+    let items: any[] = [];
     
-    const product = products.find(p => p.id.toString() === pid);
+    if (pidMatches.length > 0) {
+      pidMatches.forEach((match: any, index: number) => {
+        const pid = match[1];
+        const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
+        const product = products.find(p => p.id.toString() === pid);
+        if (product) {
+          items.push({
+            name: product.name,
+            quantity: qty,
+            price: product.price
+          });
+        }
+      });
+    } else {
+      // Fallback for single item legacy format
+      const qtyMatch = e.description.match(/\(x(\d+)\)/);
+      const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+      const cleanDesc = e.description.replace(/^Offline Sale:\s*/i, '').split('[PID:')[0].trim();
+      const legacyItemName = cleanDesc.split('|')[0].split('(x')[0].trim();
+      
+      items.push({
+        name: legacyItemName || "Product",
+        quantity: qty,
+        price: (Number(e.amount) + discount) / qty
+      });
+    }
     
     // Improved Parsing: Extract customer name from multi-item description
     let customerName = "Walk-in Customer";
-    let legacyItemName = "Product";
-    const cleanDesc = e.description.replace(/^Offline Sale:\s*/i, '').split('[PID:')[0].trim();
-    const beforePipe = cleanDesc.split('|')[0].trim();
+    const cleanDescForName = e.description.replace(/^Offline Sale:\s*/i, '').split('[PID:')[0].trim();
+    const beforePipe = cleanDescForName.split('|')[0].trim();
     
-    // In multi-item sales, name is after the last item: "Item (x1), Item (x1) Name"
     const lastBracketIdx = beforePipe.lastIndexOf(')');
     if (lastBracketIdx !== -1) {
         const potentialName = beforePipe.substring(lastBracketIdx + 1).trim();
         if (potentialName) customerName = potentialName;
     } else {
-        // Fallback for single item legacy format
-        legacyItemName = beforePipe.split('(x')[0].trim();
-        if (product && legacyItemName.toLowerCase().startsWith(product.name.toLowerCase())) {
-            customerName = legacyItemName.substring(product.name.length).trim() || "Walk-in Customer";
-        } else if (legacyItemName) {
-            customerName = legacyItemName;
+        // Fallback for legacy
+        const firstPid = pidMatches[0] ? pidMatches[0][1] : null;
+        const firstProd = firstPid ? products.find(p => p.id.toString() === firstPid) : null;
+        let descPart = beforePipe.split('(x')[0].trim();
+        if (firstProd && descPart.toLowerCase().startsWith(firstProd.name.toLowerCase())) {
+            customerName = descPart.substring(firstProd.name.length).trim() || "Walk-in Customer";
+        } else if (descPart) {
+            customerName = descPart;
         }
     }
     
@@ -61,13 +87,8 @@ export default function AccountDashboard() {
       date: e.date,
       status: "PAID (OFFLINE)",
       total: e.amount,
-      rawItems: [
-        {
-          name: product ? product.name : legacyItemName,
-          quantity: qty,
-          price: product ? product.price : (e.amount / qty)
-        }
-      ]
+      discount: discount, // Added discount field
+      rawItems: items
     };
 
     setPrintingOrders([simulatedOrder]);
@@ -423,7 +444,14 @@ export default function AccountDashboard() {
         finalDesc = `${itemStrings.join(", ")} ${customerPart} ${pidStrings}`.trim();
         
         // Use the manually entered amount if provided (for bargaining), otherwise use cart sum
-        totalAmount = Number(expAmount) || itemsToProcess.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        const cartTotal = itemsToProcess.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        totalAmount = Number(expAmount) || cartTotal;
+        
+        // Track Discount
+        const discount = (expAmount && Number(expAmount) < cartTotal) ? (cartTotal - Number(expAmount)) : 0;
+        if (discount > 0) {
+            finalDesc += ` [DISC:${discount}]`;
+        }
         
         // Ensure "Offline Sale: " prefix for income categories
         if (expCategory === "Offline Sale") finalDesc = `Offline Sale: ${finalDesc}`;
@@ -573,6 +601,12 @@ export default function AccountDashboard() {
   const totalDamageLoss = expenses.filter(e => e.category === "Inventory Damage / Loss").reduce((sum, e) => sum + Number(e.amount), 0);
   const totalOpEx = expenses.filter(e => e.type !== "INCOME" && e.category !== "Inventory Damage / Loss").reduce((sum, e) => sum + Number(e.amount), 0);
   const totalOfflineSales = expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalDiscountsProvided = expenses
+    .filter(e => e.type === "INCOME" && e.category === "Offline Sale")
+    .reduce((sum, e) => {
+      const discMatch = e.description.match(/\[DISC:(\d+)\]/);
+      return sum + (discMatch ? Number(discMatch[1]) : 0);
+    }, 0);
   const manualNonSaleIncome = expenses.filter(e => e.type === "INCOME" && e.category !== "Offline Sale").reduce((sum, e) => sum + Number(e.amount), 0);
 
   // Business Profit = (Web Gross Profit) + (Offline Sale Margin) - Operating Expenses - Damage Loss
@@ -942,11 +976,15 @@ export default function AccountDashboard() {
 
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "green", marginBottom: "0.2rem" }}>
             <span>(+) Total Offline Sales (Shop):</span>
-            <span>+ Rs. {expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").reduce((sum,e)=>sum+Number(e.amount),0).toLocaleString()}</span>
+            <span>+ Rs. {totalOfflineSales.toLocaleString()}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.0rem", color: "#666", marginBottom: "0.5rem", fontStyle: "italic" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.0rem", color: "#666", marginBottom: "0.2rem", fontStyle: "italic" }}>
             <span>(-) Offline Item Cost (COGS):</span>
             <span>- Rs. {totalOfflineCOGS.toLocaleString()}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.0rem", color: "#ef4444", marginBottom: "0.5rem", fontStyle: "italic" }}>
+            <span>(ℹ️) Total Discounts Provided (Bargaining):</span>
+            <span>Rs. {totalDiscountsProvided.toLocaleString()}</span>
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", color: "green", marginBottom: "0.5rem" }}>
@@ -1475,7 +1513,22 @@ const PrintableBill = ({ printingOrders }: { printingOrders: any[] }) => {
             <div style={{ fontSize: '0.8rem', color: '#000', textAlign: 'right' }}>
               Total Items: {(order.rawItems || order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)}
             </div>
-            <div className="bill-total-amount" style={{ fontSize: '1.3rem', fontWeight: '900', color: 'black', textAlign: 'right', marginTop: '0.2rem' }}>
+            
+            {order.discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '2rem', marginTop: '4px', fontSize: '0.85rem' }}>
+                <span style={{ color: '#666' }}>Standard Subtotal:</span>
+                <span style={{ color: '#000' }}>NPR {Number(order.total) + Number(order.discount)}</span>
+              </div>
+            )}
+            
+            {order.discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '2rem', marginTop: '2px', fontSize: '0.85rem', color: '#dc2626', fontWeight: 'bold' }}>
+                <span>Bargain Discount:</span>
+                <span>- NPR {order.discount}</span>
+              </div>
+            )}
+
+            <div className="bill-total-amount" style={{ fontSize: '1.3rem', fontWeight: '900', color: 'black', textAlign: 'right', marginTop: '0.4rem', borderTop: order.discount > 0 ? '1px solid #eee' : 'none', paddingTop: order.discount > 0 ? '4px' : '0' }}>
               GRAND TOTAL: NPR {order.total}
             </div>
           </div>
