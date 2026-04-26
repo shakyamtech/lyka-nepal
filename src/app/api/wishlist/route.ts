@@ -17,12 +17,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { productId, email } = await request.json();
+    const { productId, email, size } = await request.json();
     if (!productId || !email) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
     const { data, error } = await supabaseAdmin
       .from('wishlist')
-      .insert([{ product_id: productId, customer_email: email }])
+      .insert([{ product_id: productId, customer_email: email, selected_size: size }])
       .select()
       .single();
 

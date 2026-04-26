@@ -231,6 +231,7 @@ function HomeContent() {
       });
       
       const data = await response.json();
+
       if (data.success) {
         // Clear cart after successful submission
         setCart([]);
@@ -297,7 +298,9 @@ function HomeContent() {
           borderTop: '1px solid #eee',
           animation: 'slideDown 0.3s ease'
         }}>
-          <p style={{ fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Restock Notification</p>
+          <p style={{ fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Notify me for {product.name} {selectedSizes[product.id] ? `(Size: ${selectedSizes[product.id]})` : ''}
+          </p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input 
               type="email" 
@@ -314,7 +317,11 @@ function HomeContent() {
                 const res = await fetch('/api/wishlist', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ productId: product.id, email: wishlistEmail })
+                  body: JSON.stringify({ 
+                    productId: product.id, 
+                    email: wishlistEmail,
+                    size: selectedSizes[product.id] || null
+                  })
                 });
                 if (res.ok) {
                   alert("You're on the list! We'll notify you.");
@@ -354,17 +361,21 @@ function HomeContent() {
                 return (
                   <button
                     key={szName}
-                    disabled={szQty <= 0}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (szQty > 0) {
+                        setSelectedSizes(prev => ({ ...prev, [product.id]: szName }));
+                        setWishlistActiveId(null); // Close wishlist if they select an in-stock size
+                      } else {
+                        // If sold out size clicked, open wishlist for this size
+                        setWishlistActiveId(product.id);
                         setSelectedSizes(prev => ({ ...prev, [product.id]: szName }));
                       }
                     }}
                     className={`size-btn ${selectedSizes[product.id] === szName ? 'selected' : ''}`}
                     style={{ 
-                      opacity: szQty <= 0 ? 0.4 : 1, 
-                      cursor: szQty <= 0 ? 'not-allowed' : 'pointer'
+                      border: szQty <= 0 ? '1px dashed #ef4444' : undefined,
+                      cursor: 'pointer'
                     }}
                   >
                     {szName} {szQty <= 0 && <span style={{ fontSize: '0.65rem', display: 'block', color: '#ef4444', fontWeight: 'bold' }}>Sold Out</span>}
