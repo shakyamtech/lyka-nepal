@@ -73,12 +73,12 @@ function AnalyticsSection({ orders, products, expenses = [], lastSync, isSyncing
       revenue += saleAmount;
 
       // Extract COGS for offline sale using unified regex
-      const pidMatches = Array.from((sale.description || "").matchAll(/\[PID:(.+?)\]/g));
-      const qtyMatches = Array.from((sale.description || "").matchAll(/\(x(\d+)\)/g));
+      const pidMatches = Array.from((sale.description || "").matchAll(/\[PID:(.+?)\]/g)) as any[];
+      const qtyMatches = Array.from((sale.description || "").matchAll(/\(x(\d+)\)/g)) as any[];
       
       let saleCost = 0;
       if (pidMatches.length > 0) {
-        pidMatches.forEach((match, index) => {
+        pidMatches.forEach((match: any, index: number) => {
           const pid = match[1];
           const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
           const product = products.find(p => p.id?.toString() === pid);
@@ -101,11 +101,11 @@ function AnalyticsSection({ orders, products, expenses = [], lastSync, isSyncing
       const retAmount = Number(ret.amount || 0);
       revenue -= retAmount;
 
-      const pidMatches = Array.from(ret.description.matchAll(/\[PID:(.+?)\]/g));
-      const qtyMatches = Array.from(ret.description.matchAll(/\(x(\d+)\)/g));
+      const pidMatches = Array.from((ret.description || "").matchAll(/\[PID:(.+?)\]/g)) as any[];
+      const qtyMatches = Array.from((ret.description || "").matchAll(/\(x(\d+)\)/g)) as any[];
       
       if (pidMatches.length > 0) {
-        pidMatches.forEach((match, index) => {
+        pidMatches.forEach((match: any, index: number) => {
           const pid = match[1];
           const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
           const product = products.find(p => p.id?.toString() === pid);
@@ -962,11 +962,11 @@ export default function AdminPage() {
       if (topSellersRange === "TODAY" && saleDate < startOfToday) return;
       if (topSellersRange === "MONTH" && saleDate < startOfMonth) return;
 
-      const pidMatches = Array.from(sale.description.matchAll(/\[PID:(.+?)\]/g));
-      const qtyMatches = Array.from(sale.description.matchAll(/\(x(\d+)\)/g));
+      const pidMatches = Array.from((sale.description || "").matchAll(/\[PID:(.+?)\]/g)) as any[];
+      const qtyMatches = Array.from((sale.description || "").matchAll(/\(x(\d+)\)/g)) as any[];
       
       if (pidMatches.length > 0) {
-        pidMatches.forEach((match, index) => {
+        pidMatches.forEach((match: any, index: number) => {
           const pid = match[1];
           const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
           const product = products.find(p => p.id?.toString() === pid);

@@ -33,6 +33,7 @@ export default function AccountDashboard() {
     
     // Improved Parsing: Extract customer name from multi-item description
     let customerName = "Walk-in Customer";
+    let legacyItemName = "Product";
     const cleanDesc = e.description.replace(/^Offline Sale:\s*/i, '').split('[PID:')[0].trim();
     const beforePipe = cleanDesc.split('|')[0].trim();
     
@@ -43,11 +44,11 @@ export default function AccountDashboard() {
         if (potentialName) customerName = potentialName;
     } else {
         // Fallback for single item legacy format
-        let descPart = beforePipe.split('(x')[0].trim();
-        if (product && descPart.toLowerCase().startsWith(product.name.toLowerCase())) {
-            customerName = descPart.substring(product.name.length).trim() || "Walk-in Customer";
-        } else if (descPart) {
-            customerName = descPart;
+        legacyItemName = beforePipe.split('(x')[0].trim();
+        if (product && legacyItemName.toLowerCase().startsWith(product.name.toLowerCase())) {
+            customerName = legacyItemName.substring(product.name.length).trim() || "Walk-in Customer";
+        } else if (legacyItemName) {
+            customerName = legacyItemName;
         }
     }
     
@@ -62,7 +63,7 @@ export default function AccountDashboard() {
       total: e.amount,
       rawItems: [
         {
-          name: product ? product.name : descPart,
+          name: product ? product.name : legacyItemName,
           quantity: qty,
           price: product ? product.price : (e.amount / qty)
         }
@@ -547,12 +548,12 @@ export default function AccountDashboard() {
   const totalOfflineCOGS = expenses
     .filter(e => e.type === "INCOME" && e.category === "Offline Sale")
     .reduce((sum, e) => {
-      const pidMatches = Array.from(e.description.matchAll(/\[PID:(.+?)\]/g));
-      const qtyMatches = Array.from(e.description.matchAll(/\(x(\d+)\)/g));
+      const pidMatches = Array.from((e.description || "").matchAll(/\[PID:(.+?)\]/g)) as any[];
+      const qtyMatches = Array.from((e.description || "").matchAll(/\(x(\d+)\)/g)) as any[];
       
       let itemCogs = 0;
       if (pidMatches.length > 0) {
-        pidMatches.forEach((match, index) => {
+        pidMatches.forEach((match: any, index: number) => {
           const pid = match[1];
           const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
           const prod = products.find(prod => prod.id?.toString() === pid);
@@ -990,12 +991,12 @@ export default function AccountDashboard() {
               })),
               ...expenses.filter(e => e.type === "INCOME" && e.category === "Offline Sale").map(e => {
                 // Multi-item COGS Calculation
-                const pidMatches = Array.from(e.description.matchAll(/\[PID:(.+?)\]/g));
-                const qtyMatches = Array.from(e.description.matchAll(/\(x(\d+)\)/g));
+                const pidMatches = Array.from((e.description || "").matchAll(/\[PID:(.+?)\]/g)) as any[];
+                const qtyMatches = Array.from((e.description || "").matchAll(/\(x(\d+)\)/g)) as any[];
                 
                 let totalCogs = 0;
                 if (pidMatches.length > 0) {
-                  pidMatches.forEach((match, index) => {
+                  pidMatches.forEach((match: any, index: number) => {
                     const pid = match[1];
                     const qty = qtyMatches[index] ? Number(qtyMatches[index][1]) : 1;
                     const prod = products.find(prod => prod.id?.toString() === pid);
