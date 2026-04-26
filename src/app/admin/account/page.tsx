@@ -19,6 +19,49 @@ export default function AccountDashboard() {
   const router = useRouter();
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "auto">("auto");
   const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">("light");
+  const [printingOrders, setPrintingOrders] = useState<any[]>([]);
+
+  const handlePrintOffline = (e: any) => {
+    // Parse description: "summer windjackate Rabindra (x1) [PID:41]"
+    const pidMatch = e.description.match(/\[PID:(\d+)\]/);
+    const qtyMatch = e.description.match(/\(x(\d+)\)/);
+    
+    const pid = pidMatch ? pidMatch[1] : null;
+    const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+    
+    const product = products.find(p => p.id.toString() === pid);
+    
+    // Extract customer name if possible (the part before (x1))
+    // Often it's "Product Name Customer Name"
+    let customerInfo = e.description.split('(x')[0].trim();
+    if (product && customerInfo.toLowerCase().includes(product.name.toLowerCase())) {
+        customerInfo = customerInfo.replace(new RegExp(product.name, 'gi'), '').trim();
+    }
+    
+    const simulatedOrder = {
+      id: `ACC-${e.id}`,
+      name: customerInfo || "Walk-in Customer",
+      address: "Store Purchase",
+      phone: "N/A",
+      email: "N/A",
+      date: e.date,
+      status: "PAID (OFFLINE)",
+      total: e.amount,
+      items: [
+        {
+          name: product ? product.name : (e.description.split('(x')[0].trim() || e.category),
+          quantity: qty,
+          price: product ? product.price : (e.amount / qty)
+        }
+      ]
+    };
+
+    setPrintingOrders([simulatedOrder]);
+    setTimeout(() => {
+      window.print();
+      setPrintingOrders([]);
+    }, 500);
+  };
 
   useEffect(() => {
     const savedUser = localStorage.getItem('adminUser');
@@ -626,6 +669,14 @@ export default function AccountDashboard() {
                         <div style={{ color: e.type === "INCOME" ? "green" : "red", fontWeight: "bold", marginRight: "1rem" }}>
                           {e.type === "INCOME" ? "+" : "-"} Rs.{Number(e.amount).toLocaleString()}
                         </div>
+                        {e.category === "Offline Sale" && (
+                          <button 
+                            onClick={() => handlePrintOffline(e)} 
+                            style={{ background: "#4f46e5", color: "white", border: "none", padding: "0.3rem 0.7rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                          >
+                            🖨️ Print Bill
+                          </button>
+                        )}
                         <button onClick={() => { setEditingExpenseId(e.id); setEditExpType(e.type || "EXPENSE"); setEditExpCategory(e.category); setEditExpDesc(e.description); setEditExpAmount(e.amount); }} style={{ background: "transparent", border: "none", color: "#2563eb", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Edit</button>
                         <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Delete</button>
                       </div>
@@ -1162,6 +1213,72 @@ export default function AccountDashboard() {
           <p style={{ marginTop: '0.5rem' }}>Secure Financial Environment</p>
         </footer>
       </div>
+
+      <PrintableBill printingOrders={printingOrders} />
     </div>
   );
 }
+
+const PrintableBill = ({ printingOrders }: { printingOrders: any[] }) => {
+  if (printingOrders.length === 0) return null;
+  
+  return (
+    <div className="printable-bill light-theme" style={{ color: '#000000', background: '#ffffff' }}>
+      {printingOrders.map((order) => (
+        <div key={order.id} className="bill-page" style={{ color: '#000000', background: '#ffffff', padding: '40px', border: 'none' }}>
+          <div className="bill-header" style={{ borderBottom: '3px solid black', paddingBottom: '1rem', marginBottom: '2rem', textAlign: 'center' }}>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: '900', letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 0.5rem 0', color: 'black' }}>LYKA NEPAL</h1>
+            <p style={{ color: 'black', margin: 0 }}>Invoice for Order #{order.id}</p>
+          </div>
+          <div className="bill-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', color: 'black', marginBottom: '2rem' }}>
+            <div style={{ color: 'black' }}>
+              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Bill To:</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'black', margin: '0' }}>{order.name}</p>
+              <p style={{ color: 'black', margin: '0.2rem 0' }}>{order.address || "No Address Provided"}</p>
+              <p style={{ color: 'black', margin: '0.2rem 0' }}>Phone: {order.phone || "N/A"}</p>
+              <p style={{ color: 'black', margin: '0.2rem 0' }}>Email: {order.email || "N/A"}</p>
+            </div>
+            <div style={{ textAlign: 'right', color: 'black' }}>
+              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Order Reference:</p>
+              <p style={{ fontWeight: 'bold', color: 'black', margin: '0' }}>#{order.id}</p>
+              <p style={{ color: 'black', fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem' }}>Order Date:</p>
+              <p style={{ color: 'black', margin: '0' }}>{new Date(order.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
+              <p style={{ color: 'black', marginTop: '0.5rem' }}><strong>Status:</strong> {order.status || 'Verified'}</p>
+            </div>
+          </div>
+          <table className="bill-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', color: 'black' }}>
+            <thead>
+              <tr style={{ background: '#f0f0f0' }}>
+                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Description</th>
+                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Qty</th>
+                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Unit Price</th>
+                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(order.rawItems || order.items || []).map((item: any, i: number) => (
+                <tr key={i}>
+                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>{item.name}</td>
+                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>{item.quantity || 1}</td>
+                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>NPR {item.price}</td>
+                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>NPR {Number(item.price) * Number(item.quantity || 1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="bill-total">
+            <div style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#666', marginBottom: '50px' }}>
+              Thank you for choosing LYKA Nepal. We appreciate your business!
+            </div>
+            <div style={{ fontSize: '1rem', color: '#000' }}>
+              Total Items: {(order.rawItems || order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)}
+            </div>
+            <div className="bill-total-amount">
+              GRAND TOTAL: NPR {order.total}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
