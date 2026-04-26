@@ -79,7 +79,8 @@ const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wish
                 setWishlistActiveId(null);
                 setLocalPhone("");
               } else {
-                alert("Failed to join wishlist.");
+                const errData = await res.json();
+                alert("Database Error: " + (errData.error || "Failed to join wishlist."));
               }
               setIsJoining(false);
             }}

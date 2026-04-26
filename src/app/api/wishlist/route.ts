@@ -26,10 +26,13 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Wishlist insert error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json({ success: true, data });
-  } catch (error) {
-    console.error("Wishlist error:", error);
-    return NextResponse.json({ error: 'Failed to join wishlist' }, { status: 500 });
+  } catch (error: any) {
+    console.error("Wishlist catch error:", error);
+    return NextResponse.json({ error: error.message || 'Failed to join wishlist' }, { status: 500 });
   }
 }
