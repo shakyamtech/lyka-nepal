@@ -10,6 +10,7 @@ import "./page.css";
 const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wishlistActiveId, setWishlistActiveId }: any) => {
   const [localPhone, setLocalPhone] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
     <div className="product-card">
@@ -21,6 +22,8 @@ const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wish
         sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
         style={{ objectFit: 'cover' }}
         priority={false}
+        onLoad={() => setImgLoaded(true)}
+        className={imgLoaded ? 'loaded' : ''}
       />
       {product.stock === 0 && (
         <div style={{
@@ -228,6 +231,7 @@ function HomeContent() {
   const [customerAddress, setCustomerAddress] = useState("");
 
   const [heroBg, setHeroBg] = useState(""); // Dynamic Hero Background
+  const [heroLoaded, setHeroLoaded] = useState(false);
   const [wishlistActiveId, setWishlistActiveId] = useState<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -431,8 +435,9 @@ function HomeContent() {
   return (
     <>
       {/* Hero */}
+      {heroBg && <img src={heroBg} onLoad={() => setHeroLoaded(true)} style={{ display: 'none' }} alt="" />}
       <section
-        className="hero"
+        className={`hero luxury-fade-in ${heroLoaded ? 'active' : ''}`}
         style={heroBg ? {
           backgroundImage: `url(${heroBg})`,
           backgroundSize: 'cover',

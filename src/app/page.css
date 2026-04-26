@@ -348,10 +348,17 @@
 }
 
 .product-image img {
-  transition: transform 0.6s ease;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+  opacity: 0;
+  transform: scale(1.08);
 }
 
-.product-card:hover .product-image img {
+.product-image img.loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.product-card:hover .product-image img.loaded {
   transform: scale(1.04);
 }
 
@@ -831,4 +838,18 @@
   .hero {
     background-position: 25% center !important; /* Focus on the left side model */
   }
+}
+/* ─── Luxury Image Transitions ─── */
+.luxury-fade-in {
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.luxury-fade-in.active {
+  opacity: 1;
+}
+
+@keyframes luxurySoftIn {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
 }
