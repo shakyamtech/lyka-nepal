@@ -1022,9 +1022,11 @@ export default function AccountDashboard() {
       )}
 
       {activeTab === "P&L" && (
-        <div style={{ background: "var(--admin-card)", color: "var(--admin-text)", padding: "3rem", border: "1px solid var(--admin-border)", maxWidth: "800px" }}>
-          <h2>Profit & Loss Statement (All Time)</h2>
-          <hr style={{ margin: "2rem 0" }} />
+        <div style={{ display: "flex", gap: "2.5rem", alignItems: "flex-start", marginTop: "1rem" }}>
+          {/* LEFT COLUMN: P&L Statement */}
+          <div style={{ background: "var(--admin-card)", color: "var(--admin-text)", padding: "2.5rem", border: "1px solid var(--admin-border)", width: "480px", flexShrink: 0, borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
+            <h2 style={{ marginBottom: "1.5rem" }}>Profit & Loss Statement (All Time)</h2>
+            <hr style={{ margin: "1.5rem 0", opacity: 0.1 }} />
 
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.2rem", marginBottom: "0.5rem" }}>
             <span>Gross Web Sales Revenue:</span>
@@ -1075,10 +1077,14 @@ export default function AccountDashboard() {
             <span style={{ color: netProfit >= 0 ? (effectiveTheme === 'dark' ? "#4ade80" : "green") : (effectiveTheme === 'dark' ? "#f87171" : "red") }}>Rs. {netProfit.toLocaleString()}</span>
           </div>
 
-          <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", fontSize: "1.2rem", fontWeight: "bold", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", padding: "1rem", borderRadius: "8px", border: "1px dashed #3b82f6" }}>
-            <span>OVERALL CASH POSITION (Incl. Loans/Capital):</span>
-            <span>Rs. {overallCashPosition.toLocaleString()}</span>
+            <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", fontSize: "1.2rem", fontWeight: "bold", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", padding: "1rem", borderRadius: "8px", border: "1px dashed #3b82f6" }}>
+              <span>OVERALL CASH POSITION:</span>
+              <span>Rs. {overallCashPosition.toLocaleString()}</span>
+            </div>
           </div>
+
+          {/* RIGHT COLUMN: Unified Sales Breakdown */}
+          <div style={{ flex: 1 }}>
 
           {/* Unified Sales Breakdown Calculation */}
           {(() => {
@@ -1158,7 +1164,7 @@ export default function AccountDashboard() {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
             return (
-              <div style={{ marginTop: "3rem" }}>
+              <div style={{ marginTop: "0" }}>
                 <h3 style={{ borderBottom: "1px solid var(--admin-border)", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>📋 Unified Sales & Margin Breakdown</h3>
                 
                 {/* Search & Filter Controls */}
@@ -1256,6 +1262,7 @@ export default function AccountDashboard() {
               </div>
             );
           })()}
+          </div>
         </div>
       )}
 
