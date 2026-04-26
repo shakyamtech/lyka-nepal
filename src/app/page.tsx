@@ -137,7 +137,8 @@ const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wish
         </div>
       )}
     </div>
-  );
+  </div>
+);
 };
 
 const CategoryScroll = ({ products, category, ...props }: any) => {
