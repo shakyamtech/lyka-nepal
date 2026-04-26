@@ -619,13 +619,34 @@ section[style*="background: white"], div[style*="background: white"] {
   }
 
   /* Make tables scrollable on mobile */
-  .unified-sales-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  .unified-sales-container, .order-queue, .inventory-list {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   table {
     min-width: 600px;
+  }
+
+  /* Stack P&L Dashboard on Mobile */
+  .pl-dashboard-container {
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+
+  .pl-dashboard-container > div {
+    width: 100% !important;
+    flex: none !important;
+    padding: 1.5rem !important;
+  }
+
+  .admin-main-content h2 {
+    font-size: 1.4rem !important;
+    text-align: center;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 

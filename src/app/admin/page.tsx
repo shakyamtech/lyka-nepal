@@ -983,7 +983,7 @@ export default function AdminPage() {
 
     return Object.values(itemCounts)
       .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
+      .slice(0, 5);
   };
 
   const dynamicTopSellers = getDynamicTopSellers();
@@ -1127,6 +1127,27 @@ export default function AdminPage() {
                 isSyncing={isSyncing}
               />
 
+              {/* Low Stock Alerts */}
+              {lowStockItems.length > 0 && (
+                <div style={{ marginBottom: "3rem", background: "rgba(239, 68, 68, 0.05)", padding: "2rem", borderRadius: "16px", border: "1px solid #fca5a5" }}>
+                  <h3 style={{ color: "#b91c1c", marginBottom: "1rem", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    ⚠️ Low Stock Alerts
+                    <span style={{ fontSize: '0.8rem', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '50px' }}>{lowStockItems.length} items</span>
+                  </h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem" }}>
+                    {lowStockItems.map(p => (
+                      <div key={p.id} style={{ background: "var(--admin-card)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--admin-border)", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <p style={{ fontWeight: "bold", margin: 0, fontSize: '0.9rem' }}>{p.name}</p>
+                          <p style={{ fontSize: "0.8rem", color: "#ef4444", fontWeight: 'bold', margin: 0 }}>Only {p.stock} left!</p>
+                        </div>
+                        <button onClick={() => { setActiveTab('inventory'); handleUpdateStock(p); }} style={{ fontSize: '0.7rem', padding: '0.4rem 0.8rem', background: 'var(--admin-sidebar)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Refill</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div style={{ marginBottom: "3rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                   <h2>Top Selling Items</h2>
@@ -1141,16 +1162,25 @@ export default function AdminPage() {
                   </select>
                 </div>
                 
-                <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginTop: "1rem" }}>
                   {dynamicTopSellers.length === 0 ? (
                     <p style={{ color: "var(--text-muted)", fontStyle: "italic" }}>No sales recorded for this period.</p>
                   ) : (
                     dynamicTopSellers.map((item, index) => (
-                      <div key={item.id} style={{ background: "white", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", flex: "1 1 250px", display: "flex", alignItems: "center" }}>
-                        <h1 style={{ fontSize: "2.5rem", color: "var(--primary)", marginRight: "1rem" }}>#{index + 1}</h1>
-                        <div>
-                          <h4>{item.name}</h4>
-                          <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{item.count} units sold</p>
+                      <div key={item.id} className="theme-card" style={{ background: "var(--admin-card)", padding: "1.5rem", borderRadius: "16px", border: "1px solid var(--admin-border)", display: "flex", alignItems: "center", gap: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                        <div style={{ 
+                          fontSize: "1.8rem", 
+                          fontWeight: "900", 
+                          color: index === 0 ? "#fbbf24" : index === 1 ? "#94a3b8" : index === 2 ? "#b45309" : "var(--admin-text-muted)",
+                          width: '40px'
+                        }}>
+                          #{index + 1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: "700" }}>{item.name}</h4>
+                          <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--admin-text-muted)" }}>
+                            <span style={{ color: '#6366f1', fontWeight: 'bold' }}>{item.count}</span> units sold
+                          </p>
                         </div>
                       </div>
                     ))

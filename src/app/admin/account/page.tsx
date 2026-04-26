@@ -1022,7 +1022,7 @@ export default function AccountDashboard() {
       )}
 
       {activeTab === "P&L" && (
-        <div style={{ display: "flex", gap: "2.5rem", alignItems: "flex-start", marginTop: "1rem" }}>
+        <div className="pl-dashboard-container" style={{ display: "flex", gap: "2.5rem", alignItems: "flex-start", marginTop: "1rem" }}>
           {/* LEFT COLUMN: P&L Statement */}
           <div style={{ background: "var(--admin-card)", color: "var(--admin-text)", padding: "2.5rem", border: "1px solid var(--admin-border)", width: "480px", flexShrink: 0, borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
             <h2 style={{ marginBottom: "1.5rem" }}>Profit & Loss Statement (All Time)</h2>
