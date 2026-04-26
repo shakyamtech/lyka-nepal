@@ -619,7 +619,7 @@ export default function AccountDashboard() {
         </header>
 
       <div className="accounting-tabs">
-        {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].filter(tab => isAdmin || tab === "DAYBOOK").map(tab => (
+        {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].filter(tab => isAdmin || tab === "DAYBOOK" || tab === "STOCK").map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1176,41 +1176,58 @@ export default function AccountDashboard() {
 
       {activeTab === "STOCK" && (
         <div>
-          <div style={{ display: "flex", gap: "2rem", marginBottom: "2rem" }}>
-            <div style={{ padding: "1.5rem", background: "#111", color: "white", flex: 1 }}>
-              <p>Total Items in Warehouse</p>
-              <h2>{inventoryUnits} Units</h2>
+          {isAdmin && (
+            <div style={{ display: "flex", gap: "2rem", marginBottom: "2rem" }}>
+              <div style={{ padding: "1.5rem", background: "#111", color: "white", flex: 1 }}>
+                <p>Total Items in Warehouse</p>
+                <h2>{inventoryUnits} Units</h2>
+              </div>
+              <div style={{ padding: "1.5rem", background: "var(--admin-card)", border: "1px solid var(--admin-border)", flex: 1, borderRadius: "8px" }}>
+                <p style={{ color: "var(--admin-text-muted)" }}>Capital Locked (Cost Value)</p>
+                <h2 style={{ color: "#ef4444", whiteSpace: "nowrap" }}>Rs. {inventoryCostValue.toLocaleString()}</h2>
+              </div>
+              <div style={{ padding: "1.5rem", background: "var(--admin-card)", border: "1px solid var(--admin-border)", flex: 1, borderRadius: "8px" }}>
+                <p style={{ color: "var(--admin-text-muted)" }}>Potential Revenue (Retail Value)</p>
+                <h2 style={{ color: "#10b981", whiteSpace: "nowrap" }}>Rs. {inventoryRetailValue.toLocaleString()}</h2>
+              </div>
             </div>
-            <div style={{ padding: "1.5rem", background: "var(--admin-card)", border: "1px solid var(--admin-border)", flex: 1, borderRadius: "8px" }}>
-              <p style={{ color: "var(--admin-text-muted)" }}>Capital Locked (Cost Value)</p>
-              <h2 style={{ color: "#ef4444", whiteSpace: "nowrap" }}>Rs. {inventoryCostValue.toLocaleString()}</h2>
+          )}
+
+          {!isAdmin && (
+            <div style={{ padding: "1.5rem", background: "#111", color: "white", marginBottom: "2rem", borderRadius: "8px" }}>
+              <p>Total Inventory Available</p>
+              <h2>{inventoryUnits} Units Across All Products</h2>
             </div>
-            <div style={{ padding: "1.5rem", background: "var(--admin-card)", border: "1px solid var(--admin-border)", flex: 1, borderRadius: "8px" }}>
-              <p style={{ color: "var(--admin-text-muted)" }}>Potential Revenue (Retail Value)</p>
-              <h2 style={{ color: "#10b981", whiteSpace: "nowrap" }}>Rs. {inventoryRetailValue.toLocaleString()}</h2>
-            </div>
-          </div>
+          )}
 
           <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--admin-card)", border: "1px solid var(--admin-border)", color: "var(--admin-text)" }}>
             <thead style={{ background: "var(--admin-bg)" }}>
               <tr>
                 <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)", textAlign: "left" }}>Product</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Stock</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Unit Cost</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Unit Price</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)", background: effectiveTheme === 'dark' ? '#450a0a' : '#fee2e2', color: effectiveTheme === 'dark' ? '#fecaca' : '#b91c1c' }}>Total Cost Vol.</th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)", background: effectiveTheme === 'dark' ? '#064e3b' : '#dcfce7', color: effectiveTheme === 'dark' ? '#a7f3d0' : '#15803d' }}>Retail Potential</th>
+                <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Stock Units</th>
+                {isAdmin && (
+                  <>
+                    <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Unit Cost</th>
+                    <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)" }}>Retail Price</th>
+                    <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)", background: effectiveTheme === 'dark' ? '#450a0a' : '#fee2e2', color: effectiveTheme === 'dark' ? '#fecaca' : '#b91c1c' }}>Total Cost Vol.</th>
+                    <th style={{ padding: "1rem", borderBottom: "2px solid var(--admin-border)", background: effectiveTheme === 'dark' ? '#064e3b' : '#dcfce7', color: effectiveTheme === 'dark' ? '#a7f3d0' : '#15803d' }}>Retail Potential</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {products.map(p => (
-                <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
+                <tr key={p.id} style={{ borderBottom: "1px solid var(--admin-border)" }}>
                   <td style={{ padding: "1rem" }}>{p.name}</td>
                   <td style={{ padding: "1rem", textAlign: "center", fontWeight: "bold" }}>{p.stock}</td>
-                  <td style={{ padding: "1rem", textAlign: "center", color: "red" }}>{p.cost}</td>
-                  <td style={{ padding: "1rem", textAlign: "center", color: "green" }}>{p.price}</td>
-                  <td style={{ padding: "1rem", textAlign: "center" }}>{(p.stock * (p.cost || 0)).toLocaleString()}</td>
-                  <td style={{ padding: "1rem", textAlign: "center", fontWeight: "bold" }}>{(p.stock * p.price).toLocaleString()}</td>
+                  {isAdmin && (
+                    <>
+                      <td style={{ padding: "1rem", textAlign: "center", color: "red" }}>Rs.{p.cost}</td>
+                      <td style={{ padding: "1rem", textAlign: "center", color: "green" }}>Rs.{p.price}</td>
+                      <td style={{ padding: "1rem", textAlign: "center" }}>Rs.{(p.stock * (p.cost || 0)).toLocaleString()}</td>
+                      <td style={{ padding: "1rem", textAlign: "center", fontWeight: "bold" }}>Rs.{(p.stock * p.price).toLocaleString()}</td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
