@@ -619,7 +619,7 @@ export default function AccountDashboard() {
         </header>
 
       <div className="accounting-tabs">
-        {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].filter(tab => isAdmin || tab === "DAYBOOK" || tab === "STOCK").map(tab => (
+        {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].filter(tab => isAdmin || tab === "DAYBOOK" || tab === "STOCK" || tab === "RETURNS").map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -905,8 +905,12 @@ export default function AccountDashboard() {
                             🖨️ Print Bill
                           </button>
                         )}
-                        <button onClick={() => { setEditingExpenseId(e.id); setEditExpType(e.type || "EXPENSE"); setEditExpCategory(e.category); setEditExpDesc(e.description); setEditExpAmount(e.amount); }} style={{ background: "transparent", border: "none", color: "#2563eb", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Edit</button>
-                        <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Delete</button>
+                         {isAdmin && (
+                           <>
+                             <button onClick={() => { setEditingExpenseId(e.id); setEditExpType(e.type || "EXPENSE"); setEditExpCategory(e.category); setEditExpDesc(e.description); setEditExpAmount(e.amount); }} style={{ background: "transparent", border: "none", color: "#2563eb", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Edit</button>
+                             <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>Delete</button>
+                           </>
+                         )}
                       </div>
                     </>
                   )}
@@ -1365,30 +1369,32 @@ export default function AccountDashboard() {
               <div style={{ marginTop: "2rem" }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <h4 style={{ color: "var(--admin-text-muted)", margin: 0 }}>History (Approved/Rejected)</h4>
-                  <button 
-                    onClick={async () => {
-                      if (window.confirm("⚠️ ARE YOU SURE? This will permanently delete ALL Approved and Rejected return records from your history. This action cannot be undone.")) {
-                        const res = await fetch('/api/returns?clearHistory=true', { method: 'DELETE' });
-                        if (res.ok) fetchData();
-                        else alert("Failed to clear history.");
-                      }
-                    }}
-                    style={{ 
-                      background: 'none', 
-                      border: '1px solid #ef4444', 
-                      color: '#ef4444', 
-                      padding: '0.4rem 0.8rem', 
-                      borderRadius: '4px', 
-                      fontSize: '0.75rem', 
-                      cursor: 'pointer',
-                      fontWeight: 'bold',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
-                  >
-                    🗑️ Clear All History
-                  </button>
+                  {isAdmin && (
+                    <button 
+                      onClick={async () => {
+                        if (window.confirm("⚠️ ARE YOU SURE? This will permanently delete ALL Approved and Rejected return records from your history. This action cannot be undone.")) {
+                          const res = await fetch('/api/returns?clearHistory=true', { method: 'DELETE' });
+                          if (res.ok) fetchData();
+                          else alert("Failed to clear history.");
+                        }
+                      }}
+                      style={{ 
+                        background: 'none', 
+                        border: '1px solid #ef4444', 
+                        color: '#ef4444', 
+                        padding: '0.4rem 0.8rem', 
+                        borderRadius: '4px', 
+                        fontSize: '0.75rem', 
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                      onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
+                    >
+                      🗑️ Clear All History
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: "grid", gap: "0.5rem" }}>
                   {returnRequests.filter(r => r.status !== 'PENDING').slice(0, 5).map((req) => (
