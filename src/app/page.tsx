@@ -61,7 +61,7 @@ function HomeContent() {
 
   const [heroBg, setHeroBg] = useState(""); // Dynamic Hero Background
   const [wishlistActiveId, setWishlistActiveId] = useState<number | null>(null);
-  const [wishlistEmail, setWishlistEmail] = useState("");
+  const [wishlistPhone, setWishlistPhone] = useState("");
   const [isJoiningWishlist, setIsJoiningWishlist] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -303,30 +303,30 @@ function HomeContent() {
           </p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input 
-              type="email" 
-              placeholder="Your Email" 
-              value={wishlistEmail}
-              onChange={e => setWishlistEmail(e.target.value)}
+              type="tel" 
+              placeholder="Phone Number" 
+              value={wishlistPhone}
+              onChange={e => setWishlistPhone(e.target.value)}
               style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem', border: '1px solid #ddd', outline: 'none' }}
             />
             <button 
               disabled={isJoiningWishlist}
               onClick={async () => {
-                if (!wishlistEmail) return alert("Email required");
+                if (!wishlistPhone) return alert("Phone Number required");
                 setIsJoiningWishlist(true);
                 const res = await fetch('/api/wishlist', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ 
                     productId: product.id, 
-                    email: wishlistEmail,
+                    phone: wishlistPhone,
                     size: selectedSizes[product.id] || null
                   })
                 });
                 if (res.ok) {
                   alert("You're on the list! We'll notify you.");
                   setWishlistActiveId(null);
-                  setWishlistEmail("");
+                  setWishlistPhone("");
                 } else {
                   alert("Failed to join wishlist.");
                 }

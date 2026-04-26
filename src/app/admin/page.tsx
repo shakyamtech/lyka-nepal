@@ -1206,9 +1206,9 @@ export default function AdminPage() {
                     const pid = item.product_id;
                     const size = item.selected_size;
                     const key = `${pid}-${size || 'none'}`;
-                    if (!acc[key]) acc[key] = { name: item.products?.name || 'Unknown Product', size, count: 0, emails: [] };
+                    if (!acc[key]) acc[key] = { name: item.products?.name || 'Unknown Product', size, count: 0, phones: [] };
                     acc[key].count++;
-                    acc[key].emails.push(item.customer_email);
+                    acc[key].phones.push(item.customer_phone);
                     return acc;
                   }, {})).sort((a: any, b: any) => b.count - a.count).map((item: any, i) => (
                     <div key={i} className="theme-card" style={{ background: "var(--admin-card)", padding: "1.5rem", borderRadius: "16px", border: "1px solid var(--admin-border)", boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
@@ -1222,9 +1222,11 @@ export default function AdminPage() {
                         </span>
                       </div>
                       <div style={{ maxHeight: '100px', overflowY: 'auto', borderTop: '1px solid var(--admin-border)', paddingTop: '0.8rem' }}>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--admin-text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Customer Emails:</p>
-                        {item.emails.map((email: string, idx: number) => (
-                          <div key={idx} style={{ fontSize: '0.8rem', padding: '2px 0' }}>{email}</div>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--admin-text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Customer Phones:</p>
+                        {item.phones.map((phone: string, idx: number) => (
+                          <div key={idx} style={{ fontSize: '0.85rem', padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                            <a href={`tel:${phone}`} style={{ color: '#4f46e5', fontWeight: 'bold', textDecoration: 'none' }}>📞 {phone}</a>
+                          </div>
                         ))}
                       </div>
                     </div>
