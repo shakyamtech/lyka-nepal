@@ -903,7 +903,6 @@ export default function AccountDashboard() {
                       </div>
                     );
                   })()}
-               </div>
                <button type="submit" style={{ background: "black", color: "white", padding: "1rem", fontWeight: "bold", cursor: "pointer", border: "none" }}>SAVE ENTRY</button>
             </form>
 
