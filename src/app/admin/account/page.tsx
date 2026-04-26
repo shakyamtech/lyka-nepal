@@ -1193,7 +1193,7 @@ export default function AccountDashboard() {
                 </div>
 
                 <div className="unified-sales-container" style={{ 
-                  maxHeight: "650px", 
+                  maxHeight: "450px", 
                   overflowY: "auto", 
                   border: "1px solid var(--admin-border)",
                   borderRadius: "8px",
