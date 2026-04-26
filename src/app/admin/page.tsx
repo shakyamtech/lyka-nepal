@@ -1413,7 +1413,15 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+
+        <footer style={{ marginTop: '4rem', padding: '2rem 0', textAlign: 'center', borderTop: '1px solid var(--admin-border)', color: 'var(--admin-text-muted)', fontSize: '0.8rem', opacity: 0.6 }}>
+          <p>&copy; {new Date().getFullYear()} LYKA Nepal • Boutique Edition</p>
+          <p style={{ marginTop: '0.5rem' }}>Premium Women's Fashion Admin</p>
+        </footer>
       </main>
+
+      <PrintableBill printingOrders={printingOrders} />
+
       {/* Refill Stock Modal */}
       {refillingProduct && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
@@ -1464,13 +1472,6 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-
-      <footer style={{ marginTop: '4rem', padding: '2rem 0', textAlign: 'center', borderTop: '1px solid var(--admin-border)', color: 'var(--admin-text-muted)', fontSize: '0.8rem', opacity: 0.6 }}>
-        <p>&copy; {new Date().getFullYear()} LYKA Nepal • Boutique Edition</p>
-        <p style={{ marginTop: '0.5rem' }}>Premium Women's Fashion Admin</p>
-      </footer>
-
-      <PrintableBill printingOrders={printingOrders} />
     </div>
   );
 }

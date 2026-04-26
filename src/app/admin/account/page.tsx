@@ -604,7 +604,7 @@ export default function AccountDashboard() {
 
   return (
     <div className={`${effectiveTheme}-theme`} style={{ background: "var(--admin-bg)", color: "var(--admin-text)", minHeight: "100vh" }}>
-      <div className="admin-container" style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
+      <div className="admin-container" style={{ padding: "2rem", width: "100%", margin: 0 }}>
         <header className="accounting-header">
           <h1 style={{ color: 'var(--admin-text)', margin: 0 }}>LYKA Accounting Suite</h1>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
