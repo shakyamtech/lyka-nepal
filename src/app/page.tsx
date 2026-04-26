@@ -141,7 +141,7 @@ const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wish
 );
 };
 
-const CategoryScroll = ({ products, category, ...props }: any) => {
+const CategoryScroll = ({ products, category, addToCart, selectedSizes, setSelectedSizes, wishlistActiveId, setWishlistActiveId }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const handleScroll = (dir: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -155,7 +155,17 @@ const CategoryScroll = ({ products, category, ...props }: any) => {
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="20" y1="12" x2="4" y2="12"></line><polyline points="10 18 4 12 10 6"></polyline></svg>
       </button>
       <div className="product-grid horizontal-scroll" ref={scrollRef}>
-        {products.map((product: any) => <ProductCard key={`slider-${category}-${product.id}`} product={product} {...props} />)}
+        {products.map((product: any) => (
+          <ProductCard 
+            key={`slider-${category}-${product.id}`} 
+            product={product} 
+            addToCart={addToCart}
+            selectedSizes={selectedSizes}
+            setSelectedSizes={setSelectedSizes}
+            wishlistActiveId={wishlistActiveId}
+            setWishlistActiveId={setWishlistActiveId}
+          />
+        ))}
       </div>
       <button className="slider-arrow right" onClick={() => handleScroll('right')} aria-label="Next">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="14 6 20 12 14 18"></polyline></svg>
@@ -613,10 +623,6 @@ function HomeContent() {
                   setSelectedSizes={setSelectedSizes}
                   wishlistActiveId={wishlistActiveId}
                   setWishlistActiveId={setWishlistActiveId}
-                  wishlistPhone={wishlistPhone}
-                  setWishlistPhone={setWishlistPhone}
-                  isJoiningWishlist={isJoiningWishlist}
-                  setIsJoiningWishlist={setIsJoiningWishlist}
                 />
               ))}
             </div>
@@ -682,10 +688,6 @@ function HomeContent() {
                 setSelectedSizes={setSelectedSizes}
                 wishlistActiveId={wishlistActiveId}
                 setWishlistActiveId={setWishlistActiveId}
-                wishlistPhone={wishlistPhone}
-                setWishlistPhone={setWishlistPhone}
-                isJoiningWishlist={isJoiningWishlist}
-                setIsJoiningWishlist={setIsJoiningWishlist}
               />
             ))}
           </div>
@@ -722,10 +724,6 @@ function HomeContent() {
                     setSelectedSizes={setSelectedSizes}
                     wishlistActiveId={wishlistActiveId}
                     setWishlistActiveId={setWishlistActiveId}
-                    wishlistPhone={wishlistPhone}
-                    setWishlistPhone={setWishlistPhone}
-                    isJoiningWishlist={isJoiningWishlist}
-                    setIsJoiningWishlist={setIsJoiningWishlist}
                   />
                 </div>
                 
