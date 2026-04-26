@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import NepaliDate from "nepali-date-converter";
 import "./admin.css";
 
-function AnalyticsSection({ orders, products }: { orders: any[], products: any[] }) {
+function AnalyticsSection({ orders, products, expenses = [] }: { orders: any[], products: any[], expenses?: any[] }) {
   const [filterItemId, setFilterItemId] = useState<string>("ALL");
   const [isClient, setIsClient] = useState(false);
 
@@ -21,20 +21,17 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
 
   const verifiedOrders = orders.filter(o => o.status === 'Verified' || o.status === 'Paid & Verified' || !o.status);
 
-  const calcMetrics = (filteredOrders: any[]) => {
+  const calcMetrics = (filteredOrders: any[], filteredExpenses: any[]) => {
     let revenue = 0;
     let costTotal = 0;
 
+    // 1. Process Online Orders
     filteredOrders.forEach(o => {
-      // items array is JSON: { id, name, price, cost, ... }
       if (!o.items || !Array.isArray(o.rawItems || o.items)) return;
       const orderItems = o.rawItems || o.items;
 
       orderItems.forEach((item: any) => {
-        // Since o.items might be strings from an old schema map, we rely on rawItems if possible. 
-        // We ensure item is an object
         if (typeof item !== 'object') return;
-
         const selectedProduct = filterItemId !== "ALL" ? products.find(p => p.id?.toString() === filterItemId.toString()) : null;
         
         if (filterItemId !== "ALL") {
@@ -53,10 +50,42 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
           itemCost = liveProduct?.cost || 0;
         }
         let itemPrice = item.price || 0;
+        let qty = Number(item.quantity || 1);
 
-        revenue += Number(itemPrice);
-        costTotal += Number(itemCost);
+        revenue += (Number(itemPrice) * qty);
+        costTotal += (Number(itemCost) * qty);
       });
+    });
+
+    // 2. Process Offline Sales (from Expenses with category 'Offline Sale')
+    const offlineSales = filteredExpenses.filter(e => e.category === 'Offline Sale');
+    offlineSales.forEach(sale => {
+      // Check if it matches the filtered product if one is selected
+      if (filterItemId !== "ALL") {
+        const pidTag = `[PID:${filterItemId}]`;
+        if (!sale.description?.includes(pidTag)) return;
+      }
+
+      const saleAmount = Number(sale.amount || 0);
+      revenue += saleAmount;
+
+      // Extract COGS for offline sale using [PID:ID] pattern
+      const pidRegex = /\[PID:(\d+)\]/g;
+      let saleCost = 0;
+      let match;
+      while ((match = pidRegex.exec(sale.description || "")) !== null) {
+        const pid = match[1];
+        const product = products.find(p => p.id?.toString() === pid);
+        if (product) {
+          // If a description contains multiple items, we assume the cost is summed
+          // Note: offline sales recorded via Daybook currently log the full amount for the bundle
+          // We look for "Qty:X" in the same description if possible, or assume 1
+          const qtyMatch = sale.description.match(new RegExp(`\\[PID:${pid}\\][^]*?Qty:(\\d+)`, 'i'));
+          const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+          saleCost += (Number(product.cost || 0) * qty);
+        }
+      }
+      costTotal += saleCost;
     });
 
     return {
@@ -66,9 +95,18 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
     };
   };
 
-  const dailyMetrics = calcMetrics(verifiedOrders.filter(o => new Date(o.date) >= startOfDay));
-  const monthlyMetrics = calcMetrics(verifiedOrders.filter(o => new Date(o.date) >= startOfMonth));
-  const yearlyMetrics = calcMetrics(verifiedOrders.filter(o => new Date(o.date) >= startOfYear));
+  const dailyMetrics = calcMetrics(
+    verifiedOrders.filter(o => new Date(o.date) >= startOfDay),
+    expenses.filter(e => new Date(e.date) >= startOfDay)
+  );
+  const monthlyMetrics = calcMetrics(
+    verifiedOrders.filter(o => new Date(o.date) >= startOfMonth),
+    expenses.filter(e => new Date(e.date) >= startOfMonth)
+  );
+  const yearlyMetrics = calcMetrics(
+    verifiedOrders.filter(o => new Date(o.date) >= startOfYear),
+    expenses.filter(e => new Date(e.date) >= startOfYear)
+  );
 
   return (
     <div style={{ marginBottom: "3rem" }}>
@@ -77,7 +115,7 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
         <select
           value={filterItemId}
           onChange={e => setFilterItemId(e.target.value)}
-          style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--border)", fontFamily: "inherit" }}
+          style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--border)", fontFamily: "inherit", background: 'var(--admin-card)', color: 'var(--admin-text)' }}
         >
           <option value="ALL">All Products</option>
           {products.map(p => (
@@ -92,22 +130,22 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
           { label: "This Month", metrics: monthlyMetrics },
           { label: "This Year", metrics: yearlyMetrics },
         ].map((block, idx) => (
-          <div key={idx} style={{ background: "white", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--border)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ color: "var(--text-muted)", fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "1rem" }}>{block.label}</h3>
-            <div style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--primary)", marginBottom: "0.5rem" }}>
+          <div key={idx} className="theme-card" style={{ background: "var(--admin-card)", padding: "1.5rem", borderRadius: "16px", border: "1px solid var(--admin-border)", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
+            <h3 style={{ color: "var(--admin-text-muted)", fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "1rem" }}>{block.label}</h3>
+            <div style={{ fontSize: "2.4rem", fontWeight: "900", color: "var(--admin-text)", marginBottom: "0.5rem" }}>
               NPR {block.metrics.revenue.toLocaleString()}
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #f3f4f6", paddingTop: "0.8rem", marginTop: "0.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--admin-border)", paddingTop: "1rem", marginTop: "1rem" }}>
               <div>
-                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Total Profit</p>
-                <p style={{ fontWeight: "600", color: block.metrics.profit >= 0 ? "#16a34a" : "#ef4444" }}>
+                <p style={{ fontSize: "0.75rem", color: "var(--admin-text-muted)", textTransform: 'uppercase' }}>Profit</p>
+                <p style={{ fontSize: '1.1rem', fontWeight: "800", color: block.metrics.profit >= 0 ? "#10b981" : "#ef4444" }}>
                   {block.metrics.profit >= 0 ? "+" : ""}NPR {block.metrics.profit.toLocaleString()}
                 </p>
               </div>
               <div style={{ textAlign: "right" }}>
-                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Margin</p>
-                <p style={{ fontWeight: "600", color: "#4f46e5" }}>{block.metrics.margin}%</p>
+                <p style={{ fontSize: "0.75rem", color: "var(--admin-text-muted)", textTransform: 'uppercase' }}>Margin</p>
+                <p style={{ fontSize: '1.1rem', fontWeight: "800", color: "#6366f1" }}>{block.metrics.margin}%</p>
               </div>
             </div>
           </div>
@@ -234,6 +272,7 @@ export default function AdminPage() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [orderSearchTerm, setOrderSearchTerm] = useState("");
 
@@ -326,6 +365,18 @@ export default function AdminPage() {
 
   useEffect(() => {
     updateLocation();
+    
+    // Auto-login from localStorage
+    const savedUser = localStorage.getItem('adminUser');
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      setCurrentUser(parsed);
+      fetchProducts();
+      fetchOrders();
+      fetchExpenses();
+      fetchCategories();
+      if (parsed.role === 'admin') fetchUsers();
+    }
   }, []);
 
   useEffect(() => {
@@ -432,6 +483,7 @@ export default function AdminPage() {
       localStorage.setItem('adminUser', JSON.stringify(data.user));
       fetchProducts();
       fetchOrders();
+      fetchExpenses();
       fetchCategories();
       if (data.user.role === 'admin') fetchUsers();
     } else {
@@ -475,6 +527,11 @@ export default function AdminPage() {
     const res = await fetch("/api/categories");
     const data = await res.json();
     if (Array.isArray(data)) setCategories(data);
+  };
+  const fetchExpenses = async () => {
+    const res = await fetch("/api/expenses");
+    const data = await res.json();
+    if (Array.isArray(data)) setExpenses(data);
   };
 
   // Handlers
@@ -817,6 +874,8 @@ export default function AdminPage() {
     });
 
     const itemCounts: { [key: string]: { id: string, name: string, count: number } } = {};
+    
+    // 1. Process Online Orders
     filteredOrders.forEach(o => {
       const orderItems = o.rawItems || o.items || [];
       if (Array.isArray(orderItems)) {
@@ -827,6 +886,30 @@ export default function AdminPage() {
           }
           itemCounts[id].count += Number(item.quantity || 1);
         });
+      }
+    });
+
+    // 2. Process Offline Sales from Expenses
+    const offlineSales = expenses.filter(e => e.category === 'Offline Sale');
+    offlineSales.forEach(sale => {
+      const saleDate = new Date(sale.date);
+      if (topSellersRange === "TODAY" && saleDate < startOfToday) return;
+      if (topSellersRange === "MONTH" && saleDate < startOfMonth) return;
+
+      const pidRegex = /\[PID:(\d+)\]/g;
+      let match;
+      while ((match = pidRegex.exec(sale.description || "")) !== null) {
+        const pid = match[1];
+        const product = products.find(p => p.id?.toString() === pid);
+        if (product) {
+          const qtyMatch = sale.description.match(new RegExp(`\\[PID:${pid}\\][^]*?Qty:(\\d+)`, 'i'));
+          const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+          const id = product.id?.toString() || product.name;
+          if (!itemCounts[id]) {
+            itemCounts[id] = { id, name: product.name, count: 0 };
+          }
+          itemCounts[id].count += qty;
+        }
       }
     });
 
@@ -968,7 +1051,7 @@ export default function AdminPage() {
                )}
 
               {/* Analytics Dashboard */}
-              <AnalyticsSection orders={orders} products={products} />
+              <AnalyticsSection orders={orders} products={products} expenses={expenses} />
 
               <div style={{ marginBottom: "3rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
