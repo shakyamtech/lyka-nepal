@@ -309,6 +309,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [wishlist, setWishlist] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [orderSearchTerm, setOrderSearchTerm] = useState("");
 
@@ -564,7 +565,8 @@ export default function AdminPage() {
         fetchProducts(),
         fetchOrders(),
         fetchExpenses(),
-        fetchCategories()
+        fetchCategories(),
+        fetchWishlist()
       ]);
       setLastSync(new Date());
     } catch (e) {
@@ -598,6 +600,11 @@ export default function AdminPage() {
     const res = await fetch(`/api/expenses?t=${Date.now()}`);
     const data = await res.json();
     if (Array.isArray(data)) setExpenses(data);
+  };
+  const fetchWishlist = async () => {
+    const res = await fetch(`/api/wishlist?t=${Date.now()}`);
+    const data = await res.json();
+    if (Array.isArray(data)) setWishlist(data);
   };
 
   // Handlers
@@ -1185,6 +1192,39 @@ export default function AdminPage() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+
+              {/* Wishlist Dashboard */}
+              <div style={{ marginBottom: "3rem" }}>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                  Most Wanted (Restock Wishlist)
+                  <span style={{ fontSize: '0.8rem', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '50px' }}>Demand</span>
+                </h2>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem", marginTop: "1rem" }}>
+                  {Object.values(wishlist.reduce((acc: any, item: any) => {
+                    const pid = item.product_id;
+                    if (!acc[pid]) acc[pid] = { name: item.products?.name || 'Unknown Product', count: 0, emails: [] };
+                    acc[pid].count++;
+                    acc[pid].emails.push(item.customer_email);
+                    return acc;
+                  }, {})).sort((a: any, b: any) => b.count - a.count).map((item: any, i) => (
+                    <div key={i} className="theme-card" style={{ background: "var(--admin-card)", padding: "1.5rem", borderRadius: "16px", border: "1px solid var(--admin-border)", boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <h4 style={{ margin: 0, fontSize: '1rem', flex: 1 }}>{item.name}</h4>
+                        <span style={{ background: '#4f46e5', color: 'white', padding: '4px 12px', borderRadius: '50px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                          {item.count} waiting
+                        </span>
+                      </div>
+                      <div style={{ maxHeight: '100px', overflowY: 'auto', borderTop: '1px solid var(--admin-border)', paddingTop: '0.8rem' }}>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--admin-text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Customer Emails:</p>
+                        {item.emails.map((email: string, idx: number) => (
+                          <div key={idx} style={{ fontSize: '0.8rem', padding: '2px 0' }}>{email}</div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {wishlist.length === 0 && <p style={{ fontStyle: 'italic', opacity: 0.6 }}>No wishlist requests yet.</p>}
                 </div>
               </div>
             </>

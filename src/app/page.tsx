@@ -60,6 +60,9 @@ function HomeContent() {
   const [customerAddress, setCustomerAddress] = useState("");
 
   const [heroBg, setHeroBg] = useState(""); // Dynamic Hero Background
+  const [wishlistActiveId, setWishlistActiveId] = useState<number | null>(null);
+  const [wishlistEmail, setWishlistEmail] = useState("");
+  const [isJoiningWishlist, setIsJoiningWishlist] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const initAudio = () => {
@@ -276,12 +279,60 @@ function HomeContent() {
             padding: '0.3rem 0.7rem'
           }}>Sold Out</div>
         )}
-        {product.stock > 0 && (
+        {product.stock > 0 ? (
           <div className="hover-order-overlay" onClick={() => addToCart(product)}>
             ORDER NOW
           </div>
+        ) : (
+          <div className="hover-order-overlay" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setWishlistActiveId(product.id)}>
+            NOTIFY ME WHEN BACK
+          </div>
         )}
       </div>
+
+      {wishlistActiveId === product.id && (
+        <div style={{ 
+          background: '#f8fafc', 
+          padding: '1rem', 
+          borderTop: '1px solid #eee',
+          animation: 'slideDown 0.3s ease'
+        }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Restock Notification</p>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input 
+              type="email" 
+              placeholder="Your Email" 
+              value={wishlistEmail}
+              onChange={e => setWishlistEmail(e.target.value)}
+              style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem', border: '1px solid #ddd', outline: 'none' }}
+            />
+            <button 
+              disabled={isJoiningWishlist}
+              onClick={async () => {
+                if (!wishlistEmail) return alert("Email required");
+                setIsJoiningWishlist(true);
+                const res = await fetch('/api/wishlist', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ productId: product.id, email: wishlistEmail })
+                });
+                if (res.ok) {
+                  alert("You're on the list! We'll notify you.");
+                  setWishlistActiveId(null);
+                  setWishlistEmail("");
+                } else {
+                  alert("Failed to join wishlist.");
+                }
+                setIsJoiningWishlist(false);
+              }}
+              style={{ background: '#111', color: '#fff', border: 'none', padding: '0.5rem 1rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              {isJoiningWishlist ? "..." : "JOIN"}
+            </button>
+            <button onClick={() => setWishlistActiveId(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>×</button>
+          </div>
+        </div>
+      )}
 
       <div className="product-info">
         <div>
