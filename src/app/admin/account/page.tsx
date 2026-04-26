@@ -80,8 +80,9 @@ export default function AccountDashboard() {
     const savedUser = localStorage.getItem('adminUser');
     if (savedUser) {
       const u = JSON.parse(savedUser);
-      // Only Admin or Super Admin can enter here
-      if (u.role === 'admin' || u.role === 'superadmin' || u.email === 'shakya.mahes@gmail.com') {
+      // Allow Admin, Super Admin, and Staff to enter. 
+      // User role is restricted if they are not staff/admin.
+      if (u.role === 'admin' || u.role === 'superadmin' || u.role === 'staff' || u.email === 'shakya.mahes@gmail.com') {
         setCurrentUser(u);
         setIsAuthChecking(false);
       } else {
@@ -104,6 +105,9 @@ export default function AccountDashboard() {
       setEffectiveTheme(themeMode);
     }
   }, [themeMode]);
+
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin' || currentUser?.email === 'shakya.mahes@gmail.com';
+
   const [expType, setExpType] = useState("INCOME");
   const [expCategory, setExpCategory] = useState("Offline Sale");
   const [expDesc, setExpDesc] = useState("");
@@ -615,7 +619,7 @@ export default function AccountDashboard() {
         </header>
 
       <div className="accounting-tabs">
-        {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].map(tab => (
+        {["DAYBOOK", "P&L", "BALANCE_SHEET", "STOCK", "RETURNS"].filter(tab => isAdmin || tab === "DAYBOOK").map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
