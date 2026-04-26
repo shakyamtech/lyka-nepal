@@ -1470,6 +1470,11 @@ export default function AdminPage() {
         </div>
       )}
 
+      <footer style={{ marginTop: '4rem', padding: '2rem 0', textAlign: 'center', borderTop: '1px solid var(--admin-border)', color: 'var(--admin-text-muted)', fontSize: '0.8rem', opacity: 0.6 }}>
+        <p>&copy; {new Date().getFullYear()} LYKA Nepal • Boutique Edition</p>
+        <p style={{ marginTop: '0.5rem' }}>Premium Women's Fashion Admin</p>
+      </footer>
+
       <PrintableBill printingOrders={printingOrders} />
     </div>
   );
@@ -1481,55 +1486,55 @@ const PrintableBill = ({ printingOrders }: { printingOrders: any[] }) => {
   return (
     <div className="printable-bill light-theme" style={{ color: '#000000', background: '#ffffff' }}>
       {printingOrders.map((order) => (
-        <div key={order.id} className="bill-page" style={{ color: '#000000', background: '#ffffff', padding: '40px', border: 'none' }}>
-          <div className="bill-header" style={{ borderBottom: '3px solid black', paddingBottom: '1rem', marginBottom: '2rem', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: '900', letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 0.5rem 0', color: 'black' }}>LYKA NEPAL</h1>
-            <p style={{ color: 'black', margin: 0 }}>Invoice for Order #{order.id}</p>
+        <div key={order.id} className="bill-page" style={{ color: '#000000', background: '#ffffff', padding: '20px', border: 'none' }}>
+          <div className="bill-header" style={{ borderBottom: '2px solid black', paddingBottom: '0.6rem', marginBottom: '1rem', textAlign: 'center' }}>
+            <h1 style={{ fontSize: '1.8rem', fontWeight: '900', letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 0.1rem 0', color: 'black' }}>LYKA NEPAL</h1>
+            <p style={{ color: 'black', margin: 0, fontSize: '0.8rem' }}>Invoice for Order #{order.id}</p>
           </div>
-          <div className="bill-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', color: 'black', marginBottom: '2rem' }}>
+          <div className="bill-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', color: 'black', marginBottom: '1rem' }}>
             <div style={{ color: 'black' }}>
-              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Bill To:</p>
-              <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'black', margin: '0' }}>{order.name}</p>
-              <p style={{ color: 'black', margin: '0.2rem 0' }}>{order.address || "No Address Provided"}</p>
-              <p style={{ color: 'black', margin: '0.2rem 0' }}>Phone: {order.phone || "N/A"}</p>
-              <p style={{ color: 'black', margin: '0.2rem 0' }}>Email: {order.email || "N/A"}</p>
+              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.2rem', fontSize: '0.8rem' }}>Bill To:</p>
+              <p style={{ fontSize: '1rem', fontWeight: 'bold', color: 'black', margin: '0' }}>{order.name}</p>
+              <p style={{ color: 'black', margin: '0.1rem 0', fontSize: '0.8rem' }}>{order.address || "No Address Provided"}</p>
+              <p style={{ color: 'black', margin: '0.1rem 0', fontSize: '0.8rem' }}>Phone: {order.phone || "N/A"}</p>
+              <p style={{ color: 'black', margin: '0.1rem 0', fontSize: '0.8rem' }}>Email: {order.email || "N/A"}</p>
             </div>
             <div style={{ textAlign: 'right', color: 'black' }}>
-              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Order Reference:</p>
-              <p style={{ fontWeight: 'bold', color: 'black', margin: '0' }}>#{order.id}</p>
-              <p style={{ color: 'black', fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem' }}>Order Date:</p>
-              <p style={{ color: 'black', margin: '0' }}>{new Date(order.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
-              <p style={{ color: 'black', marginTop: '0.5rem' }}><strong>Status:</strong> {order.status || 'Verified'}</p>
+              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.2rem', fontSize: '0.8rem' }}>Order Reference:</p>
+              <p style={{ fontWeight: 'bold', color: 'black', margin: '0', fontSize: '0.9rem' }}>#{order.id}</p>
+              <p style={{ color: 'black', fontWeight: 'bold', marginTop: '0.6rem', marginBottom: '0.2rem', fontSize: '0.8rem' }}>Order Date:</p>
+              <p style={{ color: 'black', margin: '0', fontSize: '0.8rem' }}>{new Date(order.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
+              <p style={{ color: 'black', marginTop: '0.3rem', fontSize: '0.8rem' }}><strong>Status:</strong> {order.status || 'Verified'}</p>
             </div>
           </div>
           <table className="bill-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', color: 'black' }}>
             <thead>
               <tr style={{ background: '#f0f0f0' }}>
-                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Description</th>
-                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Qty</th>
-                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Unit Price</th>
-                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Amount</th>
+                <th style={{ border: '1px solid black', padding: '6px', textAlign: 'left', color: 'black', fontSize: '0.75rem' }}>Description</th>
+                <th style={{ border: '1px solid black', padding: '6px', textAlign: 'left', color: 'black', fontSize: '0.75rem' }}>Qty</th>
+                <th style={{ border: '1px solid black', padding: '6px', textAlign: 'left', color: 'black', fontSize: '0.75rem' }}>Unit Price</th>
+                <th style={{ border: '1px solid black', padding: '6px', textAlign: 'left', color: 'black', fontSize: '0.75rem' }}>Amount</th>
               </tr>
             </thead>
             <tbody>
               {(order.rawItems || order.items || []).map((item: any, i: number) => (
                 <tr key={i}>
-                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>{item.name}</td>
-                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>{item.quantity || 1}</td>
-                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>NPR {item.price}</td>
-                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>NPR {Number(item.price) * Number(item.quantity || 1)}</td>
+                  <td style={{ border: '1px solid black', padding: '6px', color: 'black', fontSize: '0.75rem' }}>{item.name}</td>
+                  <td style={{ border: '1px solid black', padding: '6px', color: 'black', fontSize: '0.75rem' }}>{item.quantity || 1}</td>
+                  <td style={{ border: '1px solid black', padding: '6px', color: 'black', fontSize: '0.75rem' }}>NPR {item.price}</td>
+                  <td style={{ border: '1px solid black', padding: '6px', color: 'black', fontSize: '0.75rem' }}>NPR {Number(item.price) * Number(item.quantity || 1)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="bill-total">
-            <div style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#666', marginBottom: '50px' }}>
+          <div className="bill-total" style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid black' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#666', marginBottom: '8px' }}>
               Thank you for choosing LYKA Nepal. We appreciate your business!
             </div>
-            <div style={{ fontSize: '1rem', color: '#000' }}>
+            <div style={{ fontSize: '0.8rem', color: '#000', textAlign: 'right' }}>
               Total Items: {(order.rawItems || order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)}
             </div>
-            <div className="bill-total-amount">
+            <div className="bill-total-amount" style={{ fontSize: '1.3rem', fontWeight: '900', color: 'black', textAlign: 'right', marginTop: '0.2rem' }}>
               GRAND TOTAL: NPR {order.total}
             </div>
           </div>

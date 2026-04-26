@@ -31,25 +31,28 @@ export default function AccountDashboard() {
     
     const product = products.find(p => p.id.toString() === pid);
     
-    // Extract customer name if possible (the part before (x1))
-    // Often it's "Product Name Customer Name"
-    let customerInfo = e.description.split('(x')[0].trim();
-    if (product && customerInfo.toLowerCase().includes(product.name.toLowerCase())) {
-        customerInfo = customerInfo.replace(new RegExp(product.name, 'gi'), '').trim();
+    // Improved Parsing: Extract customer name
+    let descPart = e.description.replace(/^Offline Sale:\s*/i, '').split('(x')[0].trim();
+    let customerName = "Walk-in Customer";
+    
+    if (product && descPart.toLowerCase().startsWith(product.name.toLowerCase())) {
+        customerName = descPart.substring(product.name.length).trim() || "Walk-in Customer";
+    } else if (descPart) {
+        customerName = descPart;
     }
     
     const simulatedOrder = {
-      id: `ACC-${e.id}`,
-      name: customerInfo || "Walk-in Customer",
-      address: "Store Purchase",
-      phone: "N/A",
-      email: "N/A",
+      id: `ACC-${e.id.toString().substring(0, 8)}`,
+      name: customerName,
+      address: "In-Store Purchase",
+      phone: "9851180556", // Shop contact
+      email: "lykanepal@gmail.com",
       date: e.date,
       status: "PAID (OFFLINE)",
       total: e.amount,
-      items: [
+      rawItems: [
         {
-          name: product ? product.name : (e.description.split('(x')[0].trim() || e.category),
+          name: product ? product.name : descPart,
           quantity: qty,
           price: product ? product.price : (e.amount / qty)
         }
@@ -97,6 +100,9 @@ export default function AccountDashboard() {
   const [expAmount, setExpAmount] = useState("");
   const [offlineProductId, setOfflineProductId] = useState("");
   const [offlineQty, setOfflineQty] = useState("1");
+  const [offlineCustomerName, setOfflineCustomerName] = useState("");
+  const [offlineCustomerPhone, setOfflineCustomerPhone] = useState("");
+  const [offlineCart, setOfflineCart] = useState<any[]>([]);
   const [salesSearch, setSalesSearch] = useState("");
   const [salesTypeFilter, setSalesTypeFilter] = useState("ALL");
   const [shouldUpdateStock, setShouldUpdateStock] = useState(true);
@@ -279,58 +285,138 @@ export default function AccountDashboard() {
     fetchData();
   };
 
+  // Auto-detect customer name from phone number
+  useEffect(() => {
+    if (offlineCustomerPhone.length >= 10 && !offlineCustomerName) {
+      // 1. Search in Web Orders
+      const existingOrder = orders.find(o => o.phone === offlineCustomerPhone || o.customer_phone === offlineCustomerPhone);
+      if (existingOrder) {
+        setOfflineCustomerName(existingOrder.name || existingOrder.customerName || "");
+        return;
+      }
+
+      // 2. Search in Offline Sales (parsed from description)
+      const existingExpense = expenses.find(e => 
+        e.category === "Offline Sale" && 
+        e.description.includes(`| ${offlineCustomerPhone}`)
+      );
+      if (existingExpense) {
+        // Extract name: "Offline Sale: Product Name Name | Phone"
+        const parts = existingExpense.description.split('|')[0].trim().split('(x')[0].trim();
+        // This is still a bit fuzzy, but let's try to get the part after the product name
+        // Better yet, just use the same parsing logic we use for the report
+        const pidMatch = existingExpense.description.match(/\[PID:(.+?)\]/);
+        let pName = "";
+        if (pidMatch) {
+          const prod = products.find(p => p.id.toString() === pidMatch[1]);
+          if (prod) pName = prod.name;
+        }
+        
+        const descPart = parts.replace(/^Offline Sale:\s*/i, '').trim();
+        if (pName && descPart.startsWith(pName)) {
+          const foundName = descPart.substring(pName.length).trim();
+          if (foundName) setOfflineCustomerName(foundName);
+        } else {
+          setOfflineCustomerName(descPart);
+        }
+      }
+    }
+  }, [offlineCustomerPhone, orders, expenses, products, offlineCustomerName]);
+
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!expAmount) return;
-    try {
-      // 1. If Offline Sale or Refund Paid with Product
-      if (offlineProductId) {
-        const product = products.find((p: any) => p.id.toString() === offlineProductId);
-        if (product) {
-          const qtyNum = Number(offlineQty);
-          let newStock = Number(product.stock);
+    
+    // If it's an offline sale with a cart, we use the cart. 
+    // If it's a single product selected, we use that.
+    let itemsToProcess = [...offlineCart];
+    if (itemsToProcess.length === 0 && offlineProductId) {
+      const p = products.find((p: any) => p.id.toString() === offlineProductId);
+      if (p) {
+        itemsToProcess.push({
+          id: offlineProductId,
+          name: p.name,
+          quantity: Number(offlineQty),
+          price: Number(p.price),
+          cost: Number(p.cost || 0)
+        });
+      }
+    }
 
+    if ((expCategory === "Offline Sale" || expCategory === "Refund Paid" || expCategory === "Inventory Damage / Loss") && itemsToProcess.length === 0) {
+       alert("Please add at least one product.");
+       return;
+    }
+
+    try {
+      // 1. Update Stock for ALL items
+      for (const item of itemsToProcess) {
+        const product = products.find((p: any) => p.id.toString() === item.id.toString());
+        if (product) {
+          let newStock = Number(product.stock);
           if (expCategory === "Offline Sale" || expCategory === "Inventory Damage / Loss") {
-            if (product.stock < qtyNum) {
-              alert(`⚠️ Out of Stock! Only ${product.stock} units remaining.`);
+            if (product.stock < item.quantity) {
+              alert(`⚠️ Out of Stock for ${product.name}! Only ${product.stock} units remaining.`);
               return;
             }
-            newStock -= qtyNum;
-          } else if (expCategory === "Refund Paid") {
-            if (shouldUpdateStock) {
-              newStock += qtyNum; // Add back to stock
-            }
+            newStock -= item.quantity;
+          } else if (expCategory === "Refund Paid" && shouldUpdateStock) {
+            newStock += item.quantity;
           }
 
           if (shouldUpdateStock || expCategory === "Offline Sale" || expCategory === "Inventory Damage / Loss") {
             const stockRes = await fetch("/api/products", {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: offlineProductId, stock: newStock })
+              body: JSON.stringify({ id: item.id, stock: newStock })
             });
-            if (!stockRes.ok) throw new Error("Failed to update stock");
+            if (!stockRes.ok) throw new Error(`Failed to update stock for ${product.name}`);
           }
         }
       }
 
-      // 2. Log Entry
+      // 2. Construct Description & Amount
+      let finalDesc = expDesc;
+      let totalAmount = Number(expAmount);
+
+      if (itemsToProcess.length > 0) {
+        // Multi-item description format: "Product A (x1), Product B (x2) Customer Name | Phone [PIDs:1,2]"
+        const itemStrings = itemsToProcess.map(i => `${i.name} (x${i.quantity})`);
+        const pidStrings = itemsToProcess.map(i => `[PID:${i.id}]`).join(' ');
+        
+        const customerPart = [offlineCustomerName, offlineCustomerPhone ? `| ${offlineCustomerPhone}` : ""].filter(Boolean).join(" ");
+        finalDesc = `${itemStrings.join(", ")} ${customerPart} ${pidStrings}`.trim();
+        totalAmount = itemsToProcess.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        
+        // Ensure "Offline Sale: " prefix for income categories
+        if (expCategory === "Offline Sale") finalDesc = `Offline Sale: ${finalDesc}`;
+      } else {
+        // Fallback for non-product entries
+        if (expCategory === "Offline Sale" && offlineCustomerName) {
+          finalDesc = `${expDesc} ${offlineCustomerName}`.trim();
+        }
+        if (expCategory === "Offline Sale" && offlineCustomerPhone) {
+          finalDesc = `${finalDesc} | ${offlineCustomerPhone}`;
+        }
+      }
+
+      // 3. Log Entry
       const res = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           type: expType, 
           category: expCategory, 
-          description: (expCategory === "Offline Sale" || expCategory === "Refund Paid" || expCategory === "Inventory Damage / Loss") && offlineProductId 
-            ? `${expDesc} (x${offlineQty})${!shouldUpdateStock && expCategory === "Refund Paid" ? " [DAMAGED - NO RESTOCK]" : ""} [PID:${offlineProductId}]` 
-            : expDesc, 
-          amount: Number(expAmount) 
+          description: finalDesc,
+          amount: totalAmount 
         })
       });
 
       if (res.ok) {
-        setExpDesc(""); setExpAmount(""); setOfflineProductId(""); setOfflineQty("1"); setShouldUpdateStock(true);
+        setExpDesc(""); setExpAmount(""); setOfflineProductId(""); setOfflineQty("1"); 
+        setOfflineCustomerName(""); setOfflineCustomerPhone(""); setOfflineCart([]); setShouldUpdateStock(true);
         fetchData();
-        alert(expType === "INCOME" ? "Income added & Stock updated!" : "Entry added & Stock updated!");
+        alert("Entry added & Stock updated!");
       }
     } catch (err) {
       console.error(err);
@@ -550,19 +636,80 @@ export default function AccountDashboard() {
                       <option key={p.id} value={p.id.toString()}>{p.name} (Stock: {p.stock})</option>
                     ))}
                   </select>
-                  <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                    <label style={{ fontSize: "0.9rem" }}>Quantity:</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      value={offlineQty} 
-                      onChange={(e) => {
-                        setOfflineQty(e.target.value);
-                        const p = products.find(prod => prod.id.toString() === offlineProductId);
-                        if (p) setExpAmount((Number(p.price) * Number(e.target.value)).toString());
-                      }} 
-                      style={{ padding: "0.5rem", width: "80px", borderRadius: "4px", border: "1px solid var(--admin-border)" }} 
-                    />
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                      <label style={{ fontSize: "0.9rem" }}>Quantity:</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        value={offlineQty} 
+                        onChange={(e) => {
+                          setOfflineQty(e.target.value);
+                          const p = products.find(prod => prod.id.toString() === offlineProductId);
+                          if (p) setExpAmount((Number(p.price) * Number(e.target.value)).toString());
+                        }} 
+                        style={{ padding: "0.5rem", width: "80px", borderRadius: "4px", border: "1px solid var(--admin-border)", background: "var(--admin-bg)", color: "var(--admin-text)" }} 
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const p = products.find(prod => prod.id.toString() === offlineProductId);
+                          if (!p) return alert("Select a product first");
+                          const newItem = {
+                            id: p.id,
+                            name: p.name,
+                            quantity: Number(offlineQty),
+                            price: Number(p.price),
+                            cost: Number(p.cost || 0)
+                          };
+                          setOfflineCart([...offlineCart, newItem]);
+                          setOfflineProductId("");
+                          setOfflineQty("1");
+                        }}
+                        style={{ padding: "0.5rem 1rem", background: "#3b82f6", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                      >
+                        + Add Item
+                      </button>
+                    </div>
+
+                    {offlineCart.length > 0 && (
+                      <div style={{ padding: "0.8rem", background: "rgba(0,0,0,0.2)", borderRadius: "6px", border: "1px dashed #666" }}>
+                        <p style={{ fontSize: "0.75rem", fontWeight: "bold", marginBottom: "0.5rem", opacity: 0.8 }}>🛒 CURRENT CART:</p>
+                        {offlineCart.map((item, idx) => (
+                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "4px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "2px" }}>
+                            <span>{item.name} (x{item.quantity})</span>
+                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                              <span>Rs. {item.price * item.quantity}</span>
+                              <button onClick={() => setOfflineCart(offlineCart.filter((_, i) => i !== idx))} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "1rem", padding: 0 }}>×</button>
+                            </div>
+                          </div>
+                        ))}
+                        <div style={{ textAlign: "right", fontWeight: "bold", marginTop: "5px", color: "#10b981", fontSize: "0.85rem" }}>
+                          Total: Rs. {offlineCart.reduce((sum, i) => sum + (i.price * i.quantity), 0).toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
+                    <div style={{ flex: 1, minWidth: "150px" }}>
+                      <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px" }}>Customer Name:</label>
+                      <input 
+                        type="text" 
+                        placeholder="Mahesh Shakya" 
+                        value={offlineCustomerName} 
+                        onChange={(e) => setOfflineCustomerName(e.target.value)} 
+                        style={{ padding: "0.5rem", width: "100%", borderRadius: "4px", border: "1px solid var(--admin-border)", background: "var(--admin-bg)", color: "var(--admin-text)" }} 
+                      />
+                    </div>
+                    <div style={{ flex: 1, minWidth: "150px" }}>
+                      <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px" }}>Customer Phone:</label>
+                      <input 
+                        type="text" 
+                        placeholder="9851..." 
+                        value={offlineCustomerPhone} 
+                        onChange={(e) => setOfflineCustomerPhone(e.target.value)} 
+                        style={{ padding: "0.5rem", width: "100%", borderRadius: "4px", border: "1px solid var(--admin-border)", background: "var(--admin-bg)", color: "var(--admin-text)" }} 
+                      />
+                    </div>
                   </div>
 
                   {expCategory === "Refund Paid" && (
@@ -762,9 +909,19 @@ export default function AccountDashboard() {
                 const qtyMatch = e.description.match(/\(x(\d+)\)/);
                 const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
                 const cogs = p ? (p.cost || 0) * qty : 0;
+
+                // Extract customer name exactly like in the print logic
+                let descPart = e.description.replace(/^Offline Sale:\s*/i, '').split('(x')[0].trim();
+                let customerName = "Walk-in Customer";
+                if (p && descPart.toLowerCase().startsWith(p.name.toLowerCase())) {
+                  customerName = descPart.substring(p.name.length).trim() || "Walk-in Customer";
+                } else if (descPart && !p) {
+                  customerName = descPart;
+                }
+
                 return {
                   type: 'OFFLINE',
-                  customer: "Walk-in Customer",
+                  customer: customerName,
                   contact: "(Physical Sale)",
                   date: e.date,
                   revenue: Number(e.amount),
@@ -847,9 +1004,9 @@ export default function AccountDashboard() {
                               <div style={{ fontSize: "0.85rem" }}>{s.date ? `${new Date(s.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} (${new NepaliDate(new Date(s.date)).format('DD MMMM YYYY')} BS)` : "—"}</div>
                               <div style={{ fontSize: "0.7rem", fontStyle: "italic" }}>{s.desc}</div>
                             </td>
-                            <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {s.revenue.toLocaleString()}</td>
-                            <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#f87171" }}>Rs. {s.cogs.toLocaleString()}</td>
-                            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "#4ade80" : "#f87171" }}>
+                            <td style={{ padding: "0.7rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>Rs. {s.revenue.toLocaleString()}</td>
+                            <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#f87171", whiteSpace: "nowrap" }}>Rs. {s.cogs.toLocaleString()}</td>
+                            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: "bold", color: margin >= 0 ? "#4ade80" : "#f87171", whiteSpace: "nowrap" }}>
                               {margin >= 0 ? "+" : ""}Rs. {margin.toLocaleString()}
                             </td>
                           </tr>
@@ -864,9 +1021,9 @@ export default function AccountDashboard() {
                     <tfoot>
                       <tr style={{ background: "#111", color: "white", fontWeight: "bold" }}>
                         <td colSpan={2} style={{ padding: "0.7rem 1rem" }}>TOTAL (FILTERED)</td>
-                        <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.revenue, 0).toLocaleString()}</td>
-                        <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.cogs, 0).toLocaleString()}</td>
-                        <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#4ade80" }}>
+                        <td style={{ padding: "0.7rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.revenue, 0).toLocaleString()}</td>
+                        <td style={{ padding: "0.7rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>Rs. {unifiedSales.reduce((sum,s)=>sum+s.cogs, 0).toLocaleString()}</td>
+                        <td style={{ padding: "0.7rem 1rem", textAlign: "right", color: "#4ade80", whiteSpace: "nowrap" }}>
                           Rs. {(unifiedSales.reduce((sum,s)=>sum+(s.revenue - s.cogs), 0)).toLocaleString()}
                         </td>
                       </tr>
@@ -885,16 +1042,16 @@ export default function AccountDashboard() {
             <h2 style={{ borderBottom: "1px solid var(--admin-border)", paddingBottom: "1rem", color: "var(--admin-text)" }}>Assets</h2>
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between" }}>
               <span>Total Cash & Revenue Generated</span>
-              <strong>Rs. {(totalSalesRevenue + totalOtherIncome).toLocaleString()}</strong>
+              <strong style={{ whiteSpace: "nowrap" }}>Rs. {(totalSalesRevenue + totalOtherIncome).toLocaleString()}</strong>
             </div>
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between" }}>
               <span>Current Inventory Cost Value</span>
-              <strong>Rs. {inventoryCostValue.toLocaleString()}</strong>
+              <strong style={{ whiteSpace: "nowrap" }}>Rs. {inventoryCostValue.toLocaleString()}</strong>
             </div>
             <hr style={{ margin: "2rem 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.4rem", fontWeight: "bold" }}>
               <span>Total Assets</span>
-              <span>Rs. {(totalSalesRevenue + totalOtherIncome + inventoryCostValue).toLocaleString()}</span>
+              <span style={{ whiteSpace: "nowrap" }}>Rs. {(totalSalesRevenue + totalOtherIncome + inventoryCostValue).toLocaleString()}</span>
             </div>
           </div>
           <div style={{ border: "2px solid var(--admin-border)", padding: "2rem", background: "var(--admin-card)" }}>
@@ -902,7 +1059,7 @@ export default function AccountDashboard() {
             <p style={{ marginTop: "1rem", color: "gray" }}>No external liabilities recorded in e-commerce system.</p>
             <div style={{ marginTop: "1rem", display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
               <span>Owner's Equity (Net Worth)</span>
-              <span>Rs. {(totalSalesRevenue + totalOtherIncome + inventoryCostValue).toLocaleString()}</span>
+              <span style={{ whiteSpace: "nowrap" }}>Rs. {(totalSalesRevenue + totalOtherIncome + inventoryCostValue).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -917,11 +1074,11 @@ export default function AccountDashboard() {
             </div>
             <div style={{ padding: "1.5rem", background: "var(--admin-card)", border: "1px solid var(--admin-border)", flex: 1, borderRadius: "8px" }}>
               <p style={{ color: "var(--admin-text-muted)" }}>Capital Locked (Cost Value)</p>
-              <h2 style={{ color: "#ef4444" }}>Rs. {inventoryCostValue.toLocaleString()}</h2>
+              <h2 style={{ color: "#ef4444", whiteSpace: "nowrap" }}>Rs. {inventoryCostValue.toLocaleString()}</h2>
             </div>
             <div style={{ padding: "1.5rem", background: "var(--admin-card)", border: "1px solid var(--admin-border)", flex: 1, borderRadius: "8px" }}>
               <p style={{ color: "var(--admin-text-muted)" }}>Potential Revenue (Retail Value)</p>
-              <h2 style={{ color: "#10b981" }}>Rs. {inventoryRetailValue.toLocaleString()}</h2>
+              <h2 style={{ color: "#10b981", whiteSpace: "nowrap" }}>Rs. {inventoryRetailValue.toLocaleString()}</h2>
             </div>
           </div>
 
@@ -1207,7 +1364,6 @@ export default function AccountDashboard() {
           </div>
         </div>
       )}
-        {/* Admin Footer */}
         <footer style={{ marginTop: '4rem', padding: '2rem 0', textAlign: 'center', borderTop: '1px solid var(--admin-border)', color: 'var(--admin-text-muted)', fontSize: '0.8rem', opacity: 0.6 }}>
           <p>&copy; {new Date().getFullYear()} LYKA Admin Suite • Accounting & Finance Edition</p>
           <p style={{ marginTop: '0.5rem' }}>Secure Financial Environment</p>
@@ -1225,55 +1381,55 @@ const PrintableBill = ({ printingOrders }: { printingOrders: any[] }) => {
   return (
     <div className="printable-bill light-theme" style={{ color: '#000000', background: '#ffffff' }}>
       {printingOrders.map((order) => (
-        <div key={order.id} className="bill-page" style={{ color: '#000000', background: '#ffffff', padding: '40px', border: 'none' }}>
-          <div className="bill-header" style={{ borderBottom: '3px solid black', paddingBottom: '1rem', marginBottom: '2rem', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: '900', letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 0.5rem 0', color: 'black' }}>LYKA NEPAL</h1>
-            <p style={{ color: 'black', margin: 0 }}>Invoice for Order #{order.id}</p>
+        <div key={order.id} className="bill-page" style={{ color: '#000000', background: '#ffffff', padding: '20px', border: 'none' }}>
+          <div className="bill-header" style={{ borderBottom: '2px solid black', paddingBottom: '0.6rem', marginBottom: '1rem', textAlign: 'center' }}>
+            <h1 style={{ fontSize: '1.8rem', fontWeight: '900', letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 0.1rem 0', color: 'black' }}>LYKA NEPAL</h1>
+            <p style={{ color: 'black', margin: 0, fontSize: '0.8rem' }}>Invoice for Order #{order.id}</p>
           </div>
-          <div className="bill-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', color: 'black', marginBottom: '2rem' }}>
+          <div className="bill-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', color: 'black', marginBottom: '1rem' }}>
             <div style={{ color: 'black' }}>
-              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Bill To:</p>
-              <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'black', margin: '0' }}>{order.name}</p>
-              <p style={{ color: 'black', margin: '0.2rem 0' }}>{order.address || "No Address Provided"}</p>
-              <p style={{ color: 'black', margin: '0.2rem 0' }}>Phone: {order.phone || "N/A"}</p>
-              <p style={{ color: 'black', margin: '0.2rem 0' }}>Email: {order.email || "N/A"}</p>
+              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.2rem', fontSize: '0.8rem' }}>Bill To:</p>
+              <p style={{ fontSize: '1rem', fontWeight: 'bold', color: 'black', margin: '0' }}>{order.name}</p>
+              <p style={{ color: 'black', margin: '0.1rem 0', fontSize: '0.8rem' }}>{order.address || "No Address Provided"}</p>
+              <p style={{ color: 'black', margin: '0.1rem 0', fontSize: '0.8rem' }}>Phone: {order.phone || "N/A"}</p>
+              <p style={{ color: 'black', margin: '0.1rem 0', fontSize: '0.8rem' }}>Email: {order.email || "N/A"}</p>
             </div>
             <div style={{ textAlign: 'right', color: 'black' }}>
-              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.5rem' }}>Order Reference:</p>
-              <p style={{ fontWeight: 'bold', color: 'black', margin: '0' }}>#{order.id}</p>
-              <p style={{ color: 'black', fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem' }}>Order Date:</p>
-              <p style={{ color: 'black', margin: '0' }}>{new Date(order.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
-              <p style={{ color: 'black', marginTop: '0.5rem' }}><strong>Status:</strong> {order.status || 'Verified'}</p>
+              <p style={{ color: 'black', fontWeight: 'bold', marginBottom: '0.2rem', fontSize: '0.8rem' }}>Order Reference:</p>
+              <p style={{ fontWeight: 'bold', color: 'black', margin: '0', fontSize: '0.9rem' }}>#{order.id}</p>
+              <p style={{ color: 'black', fontWeight: 'bold', marginTop: '0.6rem', marginBottom: '0.2rem', fontSize: '0.8rem' }}>Order Date:</p>
+              <p style={{ color: 'black', margin: '0', fontSize: '0.8rem' }}>{new Date(order.date).toLocaleString('en-US', { hour12: true, timeZone: 'Asia/Kathmandu' })} ({new NepaliDate(new Date(order.date)).format('DD MMMM YYYY')} BS)</p>
+              <p style={{ color: 'black', marginTop: '0.3rem', fontSize: '0.8rem' }}><strong>Status:</strong> {order.status || 'Verified'}</p>
             </div>
           </div>
           <table className="bill-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', color: 'black' }}>
             <thead>
               <tr style={{ background: '#f0f0f0' }}>
-                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Description</th>
-                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Qty</th>
-                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Unit Price</th>
-                <th style={{ border: '1px solid black', padding: '10px', textAlign: 'left', color: 'black' }}>Amount</th>
+                <th style={{ border: '1px solid black', padding: '6px', textAlign: 'left', color: 'black', fontSize: '0.75rem' }}>Description</th>
+                <th style={{ border: '1px solid black', padding: '6px', textAlign: 'left', color: 'black', fontSize: '0.75rem' }}>Qty</th>
+                <th style={{ border: '1px solid black', padding: '6px', textAlign: 'left', color: 'black', fontSize: '0.75rem' }}>Unit Price</th>
+                <th style={{ border: '1px solid black', padding: '6px', textAlign: 'left', color: 'black', fontSize: '0.75rem' }}>Amount</th>
               </tr>
             </thead>
             <tbody>
               {(order.rawItems || order.items || []).map((item: any, i: number) => (
                 <tr key={i}>
-                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>{item.name}</td>
-                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>{item.quantity || 1}</td>
-                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>NPR {item.price}</td>
-                  <td style={{ border: '1px solid black', padding: '10px', color: 'black' }}>NPR {Number(item.price) * Number(item.quantity || 1)}</td>
+                  <td style={{ border: '1px solid black', padding: '6px', color: 'black', fontSize: '0.75rem' }}>{item.name}</td>
+                  <td style={{ border: '1px solid black', padding: '6px', color: 'black', fontSize: '0.75rem' }}>{item.quantity || 1}</td>
+                  <td style={{ border: '1px solid black', padding: '6px', color: 'black', fontSize: '0.75rem' }}>NPR {item.price}</td>
+                  <td style={{ border: '1px solid black', padding: '6px', color: 'black', fontSize: '0.75rem' }}>NPR {Number(item.price) * Number(item.quantity || 1)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="bill-total">
-            <div style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#666', marginBottom: '50px' }}>
+          <div className="bill-total" style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid black' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#666', marginBottom: '8px' }}>
               Thank you for choosing LYKA Nepal. We appreciate your business!
             </div>
-            <div style={{ fontSize: '1rem', color: '#000' }}>
+            <div style={{ fontSize: '0.8rem', color: '#000', textAlign: 'right' }}>
               Total Items: {(order.rawItems || order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)}
             </div>
-            <div className="bill-total-amount">
+            <div className="bill-total-amount" style={{ fontSize: '1.3rem', fontWeight: '900', color: 'black', textAlign: 'right', marginTop: '0.2rem' }}>
               GRAND TOTAL: NPR {order.total}
             </div>
           </div>
