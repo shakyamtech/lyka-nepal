@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import NepaliDate from "nepali-date-converter";
 import "./admin.css";
 
-function AnalyticsSection({ orders, products, expenses = [] }: { orders: any[], products: any[], expenses?: any[] }) {
+function AnalyticsSection({ orders, products, expenses = [], lastSync, isSyncing }: { orders: any[], products: any[], expenses?: any[], lastSync: Date | null, isSyncing: boolean }) {
   const [filterItemId, setFilterItemId] = useState<string>("ALL");
   const [isClient, setIsClient] = useState(false);
 
@@ -58,7 +58,10 @@ function AnalyticsSection({ orders, products, expenses = [] }: { orders: any[], 
     });
 
     // 2. Process Offline Sales (from Expenses with category 'Offline Sale')
-    const offlineSales = filteredExpenses.filter(e => e.category === 'Offline Sale');
+    const offlineSales = filteredExpenses.filter(e => 
+      e.type === 'INCOME' && 
+      e.category?.toString().toLowerCase().trim() === 'offline sale'
+    );
     offlineSales.forEach(sale => {
       // Check if it matches the filtered product if one is selected
       if (filterItemId !== "ALL") {
@@ -70,8 +73,8 @@ function AnalyticsSection({ orders, products, expenses = [] }: { orders: any[], 
       revenue += saleAmount;
 
       // Extract COGS for offline sale using unified regex
-      const pidMatches = Array.from(sale.description.matchAll(/\[PID:(.+?)\]/g));
-      const qtyMatches = Array.from(sale.description.matchAll(/\(x(\d+)\)/g));
+      const pidMatches = Array.from((sale.description || "").matchAll(/\[PID:(.+?)\]/g));
+      const qtyMatches = Array.from((sale.description || "").matchAll(/\(x(\d+)\)/g));
       
       let saleCost = 0;
       if (pidMatches.length > 0) {
@@ -133,18 +136,28 @@ function AnalyticsSection({ orders, products, expenses = [] }: { orders: any[], 
 
   return (
     <div style={{ marginBottom: "3rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <h2>Analytics & Profit Dashboard</h2>
-        <select
-          value={filterItemId}
-          onChange={e => setFilterItemId(e.target.value)}
-          style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--border)", fontFamily: "inherit", background: 'var(--admin-card)', color: 'var(--admin-text)' }}
-        >
-          <option value="ALL">All Products</option>
-          {products.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <h2 style={{ margin: 0 }}>Analytics & Profit Dashboard</h2>
+          {isSyncing && <span className="sync-spinner" style={{ fontSize: '0.8rem', color: '#6366f1' }}>🔄 Syncing...</span>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          {lastSync && (
+            <span style={{ fontSize: '0.7rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Last Updated: {lastSync.toLocaleTimeString()}
+            </span>
+          )}
+          <select
+            value={filterItemId}
+            onChange={e => setFilterItemId(e.target.value)}
+            style={{ padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--admin-border)", fontFamily: "inherit", background: 'var(--admin-card)', color: 'var(--admin-text)' }}
+          >
+            <option value="ALL">All Products</option>
+            {products.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
@@ -323,6 +336,8 @@ export default function AdminPage() {
   const [showPass, setShowPass] = useState(false);
   const [weather, setWeather] = useState<any>(null);
   const [isWeatherRefreshing, setIsWeatherRefreshing] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const updateLocation = () => {
     setIsWeatherRefreshing(true);
@@ -463,12 +478,10 @@ export default function AdminPage() {
   const playedSoundsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
-    if (activeTab === 'dashboard') {
-      fetchOrders();
-      fetchExpenses();
-      fetchProducts();
+    if (activeTab === 'dashboard' && currentUser) {
+      fetchAllData();
     }
-  }, [activeTab]);
+  }, [activeTab, currentUser]);
 
   // Polling Effect
   useEffect(() => {
@@ -491,11 +504,11 @@ export default function AdminPage() {
         }
         
         // Refresh dashboard data periodically
-        fetchOrders();
-        fetchExpenses();
-        fetchProducts();
+        if (activeTab === 'dashboard') {
+          fetchAllData();
+        }
       } catch (e) { }
-    }, 10000); // 10s refresh
+    }, 15000); // 15s refresh
 
     return () => clearInterval(interval);
   }, [currentUser]);
@@ -544,6 +557,23 @@ export default function AdminPage() {
   };
 
   // Content Fetchers
+  const fetchAllData = async () => {
+    setIsSyncing(true);
+    try {
+      await Promise.all([
+        fetchProducts(),
+        fetchOrders(),
+        fetchExpenses(),
+        fetchCategories()
+      ]);
+      setLastSync(new Date());
+    } catch (e) {
+      console.error("Data sync failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const fetchProducts = async () => {
     const res = await fetch("/api/products");
     const data = await res.json();
@@ -1089,7 +1119,13 @@ export default function AdminPage() {
                )}
 
               {/* Analytics Dashboard */}
-              <AnalyticsSection orders={orders} products={products} expenses={expenses} />
+              <AnalyticsSection 
+                orders={orders} 
+                products={products} 
+                expenses={expenses} 
+                lastSync={lastSync}
+                isSyncing={isSyncing}
+              />
 
               <div style={{ marginBottom: "3rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
