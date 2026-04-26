@@ -112,11 +112,6 @@ function AnalyticsSection({ orders, products }: { orders: any[], products: any[]
             </div>
           </div>
         ))}
-        {/* Admin Footer */}
-        <footer style={{ marginTop: '4rem', padding: '2rem 0', textAlign: 'center', borderTop: '1px solid var(--admin-border)', color: 'var(--admin-text-muted)', fontSize: '0.8rem', opacity: 0.6 }}>
-          <p>&copy; {new Date().getFullYear()} LYKA Admin Suite • Accounting & Finance Edition</p>
-          <p style={{ marginTop: '0.5rem' }}>Secure Financial Environment</p>
-        </footer>
       </div>
     </div>
   );
