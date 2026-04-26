@@ -7,8 +7,12 @@ import { useSearchParams } from "next/navigation";
 import "./page.css";
 
 // Separate content component to use searchParams
-const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wishlistActiveId, setWishlistActiveId, wishlistPhone, setWishlistPhone, isJoiningWishlist, setIsJoiningWishlist }: any) => (
-  <div className="product-card">
+const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wishlistActiveId, setWishlistActiveId }: any) => {
+  const [localPhone, setLocalPhone] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
+
+  return (
+    <div className="product-card">
     <div className="product-image" style={{ position: 'relative' }}>
       <Image
         src={product.image}
@@ -51,36 +55,37 @@ const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wish
           <input 
             type="tel" 
             placeholder="Phone Number" 
-            value={wishlistPhone}
-            onChange={e => setWishlistPhone(e.target.value)}
+            value={localPhone}
+            onChange={e => setLocalPhone(e.target.value)}
+            autoFocus
             style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem', border: '1px solid #ddd', outline: 'none' }}
           />
           <button 
-            disabled={isJoiningWishlist}
+            disabled={isJoining}
             onClick={async () => {
-              if (!wishlistPhone) return alert("Phone Number required");
-              setIsJoiningWishlist(true);
+              if (!localPhone) return alert("Phone Number required");
+              setIsJoining(true);
               const res = await fetch('/api/wishlist', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                   productId: product.id, 
-                  phone: wishlistPhone,
+                  phone: localPhone,
                   size: selectedSizes[product.id] || null
                 })
               });
               if (res.ok) {
                 alert("You're on the list! We'll notify you.");
                 setWishlistActiveId(null);
-                setWishlistPhone("");
+                setLocalPhone("");
               } else {
                 alert("Failed to join wishlist.");
               }
-              setIsJoiningWishlist(false);
+              setIsJoining(false);
             }}
             style={{ background: '#111', color: '#fff', border: 'none', padding: '0.5rem 1rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}
           >
-            {isJoiningWishlist ? "..." : "JOIN"}
+            {isJoining ? "..." : "JOIN"}
           </button>
           <button onClick={() => setWishlistActiveId(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>×</button>
         </div>
@@ -132,8 +137,8 @@ const ProductCard = ({ product, addToCart, selectedSizes, setSelectedSizes, wish
         </div>
       )}
     </div>
-  </div>
-);
+  );
+};
 
 const CategoryScroll = ({ products, category, ...props }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -212,8 +217,6 @@ function HomeContent() {
 
   const [heroBg, setHeroBg] = useState(""); // Dynamic Hero Background
   const [wishlistActiveId, setWishlistActiveId] = useState<number | null>(null);
-  const [wishlistPhone, setWishlistPhone] = useState("");
-  const [isJoiningWishlist, setIsJoiningWishlist] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const initAudio = () => {
