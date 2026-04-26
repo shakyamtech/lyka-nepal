@@ -444,9 +444,27 @@ export default function AccountDashboard() {
         })
       });
 
+      // 4. Cleanup Order History (Optional for Refunds)
+      if (expCategory === "Refund Paid" && cleanupPhone) {
+        try {
+          const searchRes = await fetch(`/api/expenses?phone=${cleanupPhone}`);
+          const matchingExpenses = await searchRes.json();
+          const incomeToDel = matchingExpenses.find((ex: any) => 
+            ex.type === 'INCOME' && 
+            (ex.category === 'Offline Sale' || ex.category === 'Misc Income')
+          );
+          if (incomeToDel) {
+            await fetch(`/api/expenses?id=${incomeToDel.id}`, { method: 'DELETE' });
+          }
+        } catch (err) {
+          console.error("Cleanup failed:", err);
+        }
+      }
+
       if (res.ok) {
         setExpDesc(""); setExpAmount(""); setOfflineProductId(""); setOfflineQty("1"); 
         setOfflineCustomerName(""); setOfflineCustomerPhone(""); setOfflineCart([]); setShouldUpdateStock(true);
+        setCleanupPhone("");
         fetchData();
         alert("Entry added & Stock updated!");
       }
@@ -758,16 +776,30 @@ export default function AccountDashboard() {
                   </div>
 
                   {expCategory === "Refund Paid" && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem", padding: "0.5rem", background: "rgba(255,255,255,0.1)", borderRadius: "4px" }}>
-                      <input 
-                        type="checkbox" 
-                        id="update-stock-check"
-                        checked={shouldUpdateStock} 
-                        onChange={(e) => setShouldUpdateStock(e.target.checked)} 
-                      />
-                      <label htmlFor="update-stock-check" style={{ fontSize: "0.85rem", cursor: "pointer" }}>
-                        {shouldUpdateStock ? "✅ Add back to sellable stock" : "❌ Damaged item (Do not add back to stock)"}
-                      </label>
+                    <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", background: "rgba(255,255,255,0.1)", borderRadius: "4px" }}>
+                        <input 
+                          type="checkbox" 
+                          id="update-stock-check"
+                          checked={shouldUpdateStock} 
+                          onChange={(e) => setShouldUpdateStock(e.target.checked)} 
+                        />
+                        <label htmlFor="update-stock-check" style={{ fontSize: "0.85rem", cursor: "pointer" }}>
+                          {shouldUpdateStock ? "✅ Add back to sellable stock" : "❌ Damaged item (Do not add back to stock)"}
+                        </label>
+                      </div>
+                      
+                      <div style={{ border: "1px dashed #ef4444", padding: "1rem", borderRadius: "6px", background: "rgba(239, 68, 68, 0.05)" }}>
+                        <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "4px", color: "#ef4444", fontWeight: "bold" }}>Cleanup Original Sale (Optional):</label>
+                        <input 
+                          type="text" 
+                          placeholder="Enter Customer Phone to delete original sale record" 
+                          value={cleanupPhone} 
+                          onChange={(e) => setCleanupPhone(e.target.value)} 
+                          style={{ padding: "0.5rem", width: "100%", borderRadius: "4px", border: "1px solid #ef4444", background: "var(--admin-bg)", color: "var(--admin-text)", fontSize: "0.85rem" }} 
+                        />
+                        <p style={{ fontSize: "0.7rem", opacity: 0.7, marginTop: "4px" }}>💡 This will find and delete the original 'Income' entry for this phone number.</p>
+                      </div>
                     </div>
                   )}
                   {expCategory === "Inventory Damage / Loss" && (
@@ -1347,93 +1379,6 @@ export default function AccountDashboard() {
                 </div>
               </div>
             )}
-          </div>
-
-          <div style={{ background: effectiveTheme === 'dark' ? 'rgba(239, 68, 68, 0.05)' : '#fff5f5', border: "1px solid #ef4444", padding: "2rem", borderRadius: "12px", marginBottom: "2rem" }}>
-            <h2 style={{ color: "#ef4444", borderBottom: "1px solid rgba(239, 68, 68, 0.2)", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>↩ Customer Return / Refund</h2>
-            <p style={{ color: "var(--admin-text-muted)", fontSize: "0.95rem", marginBottom: "1.5rem" }}>
-              Select the returned product. This will <strong>restock the inventory</strong> and <strong>log the refund as an Expense</strong> in your ledger.
-            </p>
-            <form onSubmit={handleReturn} style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
-
-              <div>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--admin-text)" }}>Product Returned</label>
-                <select
-                  value={retProductId}
-                  onChange={e => setRetProductId(e.target.value)}
-                  required
-                  style={{ width: "100%", padding: "0.8rem", border: "1px solid var(--admin-border)", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
-                >
-                  <option value="">— Select Product —</option>
-                  {products.map((p: any) => (
-                    <option key={p.id} value={p.id.toString()}>
-                      {p.name} (Current Stock: {p.stock})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <div>
-                  <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--admin-text)" }}>Quantity Returned</label>
-                  <input
-                    type="number" min="1"
-                    value={retQty}
-                    onChange={e => setRetQty(e.target.value)}
-                    required
-                    style={{ width: "100%", padding: "0.8rem", border: "1px solid var(--admin-border)", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--admin-text)" }}>Refund Amount (Rs.)</label>
-                  <input
-                    type="number" min="0"
-                    value={retAmount}
-                    onChange={e => setRetAmount(e.target.value)}
-                    required placeholder="0"
-                    style={{ width: "100%", padding: "0.8rem", border: "1px solid var(--admin-border)", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--admin-text)" }}>Note (optional)</label>
-                <input
-                  type="text"
-                  value={retNote}
-                  onChange={e => setRetNote(e.target.value)}
-                  placeholder="e.g. Wrong size, defect..."
-                  style={{ width: "100%", padding: "0.8rem", border: "1px solid var(--admin-border)", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
-                />
-              </div>
-
-              <div style={{ border: "1px dashed #ef4444", padding: "1.2rem", borderRadius: "8px", background: effectiveTheme === 'dark' ? 'rgba(239, 68, 68, 0.03)' : '#fef2f2' }}>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.9rem", color: "#ef4444" }}>Cleanup Order History (Optional)</label>
-                <input
-                  type="text"
-                  value={cleanupPhone}
-                  onChange={e => setCleanupPhone(e.target.value)}
-                  placeholder="Enter Customer Phone to delete their order record"
-                  style={{ width: "100%", padding: "0.8rem", border: "1px solid #ef4444", borderRadius: "8px", background: 'var(--admin-card)', color: 'var(--admin-text)', fontSize: "0.95rem" }}
-                />
-                <p style={{ fontSize: "0.8rem", color: "var(--admin-text-muted)", marginTop: "0.6rem", opacity: 0.8 }}>
-                  💡 This removes the original "Income" record from your Daybook.
-                </p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={retLoading}
-                style={{
-                  padding: "1.2rem", background: retLoading ? "var(--admin-border)" : "#ef4444",
-                  color: "white", border: "none", fontWeight: "bold", borderRadius: "8px",
-                  fontSize: "1rem", cursor: retLoading ? "not-allowed" : "pointer",
-                  letterSpacing: "0.05em", marginTop: "0.5rem", boxShadow: "0 4px 15px rgba(239, 68, 68, 0.2)"
-                }}
-              >
-                {retLoading ? "Processing..." : "↩ PROCESS RETURN"}
-              </button>
-            </form>
           </div>
         </div>
       )}
